@@ -1,3 +1,5 @@
+"use client";
+
 import { Container, Typography, Box, Grid, Card, CardContent, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';

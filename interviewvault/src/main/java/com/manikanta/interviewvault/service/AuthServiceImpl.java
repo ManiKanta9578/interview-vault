@@ -57,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-
+        System.out.println("Encode passcode" + user.getPassword());
         userRepository.save(user);
 
         Authentication authentication = authenticationManager.authenticate(
