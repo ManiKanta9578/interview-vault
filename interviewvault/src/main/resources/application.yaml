@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: interviewvault
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb+srv://manikanta:Mani.rider9@cluster0.fj1hbge.mongodb.net/?appName=Cluster0}
+      database: ${MONGODB_DATABASE:interview-vault}
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:10MB}
+
+# JWT Configuration
+app:
+  jwt:
+    secret: ${JWT_SECRET:mySecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmPleaseChangeInProduction}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+# Server Configuration
+server:
+  port: ${PORT:8080}
+
+
+
