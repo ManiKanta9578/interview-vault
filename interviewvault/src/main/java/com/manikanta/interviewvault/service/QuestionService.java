@@ -6,11 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QuestionService {
-    List<Question> getAllQuestions();
-    Optional<Question> getQuestionById(String id);
-    List<Question> getQuestionsByCategory(String category);
-    List<Question> searchQuestions(String keyword);
-    Question createQuestion(Question question);
-    Question updateQuestion(String id, Question question);
-    void deleteQuestion(String id);
+    List<Question> getQuestionsByUser(String username);
+    Optional<Question> getQuestionByIdAndUser(String id, String username);
+    List<Question> getQuestionsByCategoryAndUser(String category, String username);
+    List<Question> searchQuestionsByUser(String keyword, String username);
+    Question createQuestion(Question question, String username);
+    Question updateQuestion(String id, Question question, String username);
+    void deleteQuestion(String id, String username);
+    Long countQuestionsByUser(String username);
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../context/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();

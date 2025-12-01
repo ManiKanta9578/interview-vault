@@ -43,11 +43,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/questions/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/questions/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/questions/**").hasRole("ADMIN")
-                        .anyRequest().permitAll()
+                        .requestMatchers("/api/questions/**").authenticated()
+                        .anyRequest().authenticated()
                 );
 
         http.addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
