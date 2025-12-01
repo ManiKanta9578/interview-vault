@@ -90,7 +90,7 @@ export default function Home() {
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Grid container spacing={4}>
           {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+            <Grid item size={{ xs: 12, md:3 ,sm: 6 }} key={index}>
               <Card sx={{ height: '100%', textAlign: 'center' }}>
                 <CardContent>
                   <Typography variant="h2" sx={{ mb: 2 }}>{feature.icon}</Typography>
@@ -114,7 +114,7 @@ export default function Home() {
         </Typography>
         <Grid container spacing={3} sx={{ mt: 2 }}>
           {categories.map((cat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+            <Grid item size={{ xs: 12, md:3 ,sm: 6 }} key={index}>
               <Card
                 sx={{
                   background: `linear-gradient(135deg, ${cat.color} 0%, ${cat.color}dd 100%)`,
@@ -140,15 +140,15 @@ export default function Home() {
       <Box sx={{ bgcolor: 'white', py: 8 }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} textAlign="center">
-            <Grid item xs={12} md={4}>
+            <Grid item size={{ xs: 12, md:4 }}>
               <Typography variant="h2" color="primary" fontWeight={700}>500+</Typography>
               <Typography variant="h6" color="text.secondary">Interview Questions</Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item size={{ xs: 12, md:4  }}>
               <Typography variant="h2" color="primary" fontWeight={700}>10+</Typography>
               <Typography variant="h6" color="text.secondary">Categories</Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item size={{ xs: 12, md:4}}>
               <Typography variant="h2" color="primary" fontWeight={700}>100%</Typography>
               <Typography variant="h6" color="text.secondary">Free Access</Typography>
             </Grid>

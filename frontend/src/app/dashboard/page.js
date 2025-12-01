@@ -63,7 +63,7 @@ export default function DashboardPage() {
         ) : (
           <Grid container spacing={4} sx={{ mt: 2 }}>
             {cards.map((card, index) => (
-              <Grid item xs={12} md={4} key={index}>
+              <Grid item size={{ xs: 12, md:4}} key={index}>
                 <Card 
                   sx={{ 
                     height: '100%', 
