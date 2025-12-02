@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import { Save, Cancel } from '@mui/icons-material';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import RichContentEditor from '@/components/editor/RichContentEditor';
+import UnifiedEditor from '@/components/editor/UnifiedEditor';
 import { questionsAPI } from '@/lib/api';
 
 const CATEGORIES = [
@@ -47,7 +47,7 @@ export default function AddQuestionPage() {
       return;
     }
 
-    if (!formData.answer.trim()) {
+    if (!formData.answer.trim() || formData.answer === '<p>Start writing your answer here...</p>') {
       setError('Answer is required');
       return;
     }
@@ -91,7 +91,7 @@ export default function AddQuestionPage() {
             Add New Interview Question
           </Typography>
           <Typography variant="body2" color="text.secondary" paragraph>
-            Create a comprehensive interview question with rich content including text, code examples, images, and tables.
+            Create a comprehensive interview question with rich formatting, code blocks, images, and tables - all in one editor!
           </Typography>
 
           <Divider sx={{ my: 3 }} />
@@ -147,21 +147,18 @@ export default function AddQuestionPage() {
                 required
                 label="Question"
                 multiline
-                rows={3}
+                rows={2}
                 value={formData.question}
                 onChange={(e) => handleChange('question', e.target.value)}
                 placeholder="Enter the interview question..."
-                helperText="Be clear and concise. Example: What is the difference between HashMap and ConcurrentHashMap?"
+                helperText="Example: What is the difference between HashMap and ConcurrentHashMap?"
               />
 
               <Box>
                 <Typography variant="subtitle1" gutterBottom fontWeight={600}>
-                  Answer *
+                  Answer * (Use the toolbar to format text, add code, images, and tables)
                 </Typography>
-                <Typography variant="caption" color="text.secondary" paragraph>
-                  Build your answer using text, code snippets, images, and tables
-                </Typography>
-                <RichContentEditor
+                <UnifiedEditor
                   value={formData.answer}
                   onChange={(value) => handleChange('answer', value)}
                 />

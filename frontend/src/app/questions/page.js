@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import RichContentViewer from '@/components/editor/RichContentViewer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { questionsAPI } from '@/lib/api';
+import UnifiedViewer from '@/components/editor/UnifiedViewer';
 
 const CATEGORIES = [
   'All', 'Core Java', 'Collections', 'Multithreading',
@@ -178,9 +179,9 @@ export default function QuestionsPage() {
             <Typography variant="body2" color="text.secondary" paragraph>
               Start building your personal interview question collection!
             </Typography>
-            <Button 
-              variant="contained" 
-              size="large" 
+            <Button
+              variant="contained"
+              size="large"
               onClick={() => router.push('/add-question')}
               sx={{ mt: 2 }}
             >
@@ -225,7 +226,7 @@ export default function QuestionsPage() {
 
                   <Collapse in={expandedId === question.id} timeout="auto" unmountOnExit>
                     <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-                      <RichContentViewer content={question.answer} />
+                      <UnifiedViewer content={question.answer} />
                     </Box>
                   </Collapse>
                 </CardContent>
@@ -234,11 +235,11 @@ export default function QuestionsPage() {
                   <Button
                     onClick={() => setExpandedId(expandedId === question.id ? null : question.id)}
                     endIcon={
-                      <ExpandMore 
-                        sx={{ 
+                      <ExpandMore
+                        sx={{
                           transform: expandedId === question.id ? 'rotate(180deg)' : 'none',
                           transition: '0.3s'
-                        }} 
+                        }}
                       />
                     }
                   >

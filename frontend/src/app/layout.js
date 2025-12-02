@@ -6,6 +6,7 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import { AuthProvider } from "@/context/AuthContext";
 import Layout from "@/components/Layout";
 import { theme } from "@/lib/theme";
+import 'highlight.js/styles/vs2015.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
