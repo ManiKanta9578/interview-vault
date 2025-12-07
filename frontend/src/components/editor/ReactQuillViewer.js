@@ -364,7 +364,7 @@ export default function ReactQuillViewer({
       'p', 'br', 'strong', 'em', 'u', 's', 'strike', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'span', 'div', 'img'
     ],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'spellcheck', 'src', 'alt', 'style', 'data-language'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'spellcheck', 'src', 'alt', 'style', 'data-language', 'data-list', 'contenteditable'],
   });
 
   return (
