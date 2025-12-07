@@ -1,13 +1,16 @@
+/* globals.css */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --max-width: 1100px;
+  --border-radius: 12px;
+  --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro",
+    "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -17,17 +20,8 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
@@ -35,8 +29,120 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+/* Quill Editor Custom Styles */
+.ql-container {
+  font-family: inherit !important;
+}
+
+.ql-editor {
+  font-family: inherit !important;
+}
+
+.ql-editor pre.ql-syntax {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  overflow: visible;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 1em 0;
+}
+
+.ql-snow .ql-tooltip {
+  z-index: 1500 !important;
+}
+
+/* Quill Viewer Content Styles */
+.quill-viewer-content {
+  line-height: 1.7;
+}
+
+.quill-viewer-content p {
+  margin-bottom: 1em;
+}
+
+.quill-viewer-content p:last-child {
+  margin-bottom: 0;
+}
+
+.quill-viewer-content ul,
+.quill-viewer-content ol {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+
+.quill-viewer-content li {
+  margin-bottom: 0.5em;
+}
+
+.quill-viewer-content h1,
+.quill-viewer-content h2,
+.quill-viewer-content h3,
+.quill-viewer-content h4,
+.quill-viewer-content h5,
+.quill-viewer-content h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+/* Code block styling */
+.code-block-wrapper {
+  position: relative;
+  margin-bottom: 1em;
+}
+
+.hljs-code-block {
+  margin: 0 !important;
+  border-radius: 8px !important;
+}
+
+.hljs-code-block code {
+  font-family: 'Courier New', Courier, monospace !important;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Copy button styling */
+.copy-code-button {
+  transition: all 0.2s ease;
+}
+
+.copy-code-button:hover {
+  transform: scale(1.05);
+}
+
+.copy-code-button:active {
+  transform: scale(0.95);
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Dark mode scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #888;
 }

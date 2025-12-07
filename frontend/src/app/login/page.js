@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { Container, Paper, Typography, TextField, Button, Box, Alert, Link as MuiLink } from '@mui/material';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import {
+  Container, Paper, Typography, TextField, Button, Box, Alert,
+  Link as MuiLink, useTheme, useMediaQuery
+} from '@mui/material';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -11,6 +14,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,12 +32,34 @@ export default function LoginPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" align="center" gutterBottom fontWeight={600}>
+    <Container 
+      maxWidth="sm" 
+      sx={{ 
+        py: { xs: 4, sm: 6, md: 8 }, 
+        px: { xs: 2, sm: 3 },
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 }, width: '100%' }}>
+        <Typography 
+          variant="h4" 
+          align="center" 
+          gutterBottom 
+          fontWeight={600}
+          sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
+        >
           Sign In
         </Typography>
-        <Typography variant="body2" align="center" color="text.secondary" paragraph>
+        <Typography 
+          variant="body2" 
+          align="center" 
+          color="text.secondary" 
+          paragraph
+          sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+        >
           Welcome back! Please sign in to continue
         </Typography>
 
@@ -50,6 +77,7 @@ export default function LoginPage() {
             onChange={(e) => setUsername(e.target.value)}
             required
             sx={{ mb: 2 }}
+            size={isMobile ? "small" : "medium"}
           />
           
           <TextField
@@ -60,6 +88,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             sx={{ mb: 3 }}
+            size={isMobile ? "small" : "medium"}
           />
 
           <Button
@@ -68,13 +97,13 @@ export default function LoginPage() {
             variant="contained"
             size="large"
             disabled={loading}
-            sx={{ mb: 2 }}
+            sx={{ mb: 2, py: { xs: 1.5, sm: 2 } }}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
 
           <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
               Don't have an account?{' '}
               <Link href="/register" passHref legacyBehavior>
                 <MuiLink sx={{ cursor: 'pointer' }}>Sign Up</MuiLink>

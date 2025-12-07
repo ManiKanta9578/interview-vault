@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { Container, Paper, Typography, TextField, Button, Box, Alert, Link as MuiLink } from '@mui/material';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import {
+  Container, Paper, Typography, TextField, Button, Box, Alert,
+  Link as MuiLink, useTheme, useMediaQuery
+} from '@mui/material';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -16,6 +19,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -52,12 +57,34 @@ export default function RegisterPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" align="center" gutterBottom fontWeight={600}>
+    <Container 
+      maxWidth="sm" 
+      sx={{ 
+        py: { xs: 4, sm: 6, md: 8 }, 
+        px: { xs: 2, sm: 3 },
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 }, width: '100%' }}>
+        <Typography 
+          variant="h4" 
+          align="center" 
+          gutterBottom 
+          fontWeight={600}
+          sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
+        >
           Create Account
         </Typography>
-        <Typography variant="body2" align="center" color="text.secondary" paragraph>
+        <Typography 
+          variant="body2" 
+          align="center" 
+          color="text.secondary" 
+          paragraph
+          sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+        >
           Join us and start preparing for your interviews
         </Typography>
 
@@ -76,6 +103,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             required
             sx={{ mb: 2 }}
+            size={isMobile ? "small" : "medium"}
           />
 
           <TextField
@@ -87,6 +115,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             required
             sx={{ mb: 2 }}
+            size={isMobile ? "small" : "medium"}
           />
 
           <TextField
@@ -96,6 +125,7 @@ export default function RegisterPage() {
             value={formData.fullName}
             onChange={handleChange}
             sx={{ mb: 2 }}
+            size={isMobile ? "small" : "medium"}
           />
 
           <TextField
@@ -108,6 +138,7 @@ export default function RegisterPage() {
             required
             helperText="Minimum 6 characters"
             sx={{ mb: 2 }}
+            size={isMobile ? "small" : "medium"}
           />
 
           <TextField
@@ -119,6 +150,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             required
             sx={{ mb: 3 }}
+            size={isMobile ? "small" : "medium"}
           />
 
           <Button
@@ -127,13 +159,13 @@ export default function RegisterPage() {
             variant="contained"
             size="large"
             disabled={loading}
-            sx={{ mb: 2 }}
+            sx={{ mb: 2, py: { xs: 1.5, sm: 2 } }}
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </Button>
 
           <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
               Already have an account?{' '}
               <Link href="/login" passHref legacyBehavior>
                 <MuiLink sx={{ cursor: 'pointer' }}>Sign In</MuiLink>
