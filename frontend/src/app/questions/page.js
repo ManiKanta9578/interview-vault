@@ -394,7 +394,7 @@ export default function QuestionsPage() {
             </Grid>
           ) : (
             <Stack spacing={2}>
-              {filteredQuestions.slice(0, 10).map((question) => (
+              {filteredQuestions.map((question) => (
                 <QuestionCard
                   key={question.id}
                   question={question}
