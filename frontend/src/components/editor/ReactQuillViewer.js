@@ -260,6 +260,10 @@ export default function ReactQuillViewer({
           fontSize: "1rem",
           lineHeight: 1.7,
 
+          "& p": {
+            margin: "0 0 0.75rem 0",
+          },
+
           "& ul, & ol": {
             marginLeft: "1.5rem",
             paddingLeft: "1.2rem",

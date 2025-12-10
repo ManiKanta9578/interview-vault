@@ -20,15 +20,105 @@ import ReactQuillViewer from "@/components/editor/ReactQuillViewer";
 import DOMPurify from "dompurify";
 
 const CATEGORIES = [
-  { label: 'All', icon: 'ðŸ“š', count: 0 },
-  { label: 'Core Java', icon: 'â˜•', count: 45, color: '#FF6B6B' },
-  { label: 'Collections', icon: 'ðŸ“¦', count: 32, color: '#4ECDC4' },
-  { label: 'Multithreading', icon: 'âš¡', count: 28, color: '#45B7D1' },
-  { label: 'Spring Boot', icon: 'ðŸƒ', count: 38, color: '#96CEB4' },
-  { label: 'Microservices', icon: 'ðŸ”§', count: 42, color: '#FFEAA7' },
-  { label: 'Database & JPA', icon: 'ðŸ—„ï¸', count: 35, color: '#DDA0DD' },
-  { label: 'Algorithms', icon: 'ðŸ’¡', count: 52, color: '#FFA726' }
+  {
+    label: 'All',
+    icon: '📚',
+    count: 0,
+    subCategories: []
+  },
+  {
+    label: 'Core Java',
+    icon: '☕',
+    count: 45,
+    color: '#FF6B6B',
+    subCategories: [
+      "OOP Concepts",
+      "Exception Handling",
+      "Generics",
+      "JVM & Memory",
+      "Java 8 Features"
+    ]
+  },
+  {
+    label: 'Collections',
+    icon: '📦',
+    count: 32,
+    color: '#4ECDC4',
+    subCategories: [
+      "List / ArrayList",
+      "Map / HashMap",
+      "Set / HashSet",
+      "Concurrent Collections",
+      "Custom Comparator"
+    ]
+  },
+  {
+    label: 'Multithreading',
+    icon: '⚡',
+    count: 28,
+    color: '#45B7D1',
+    subCategories: [
+      "Thread Lifecycle",
+      "Executor Framework",
+      "Locks & Semaphores",
+      "Concurrency Utilities",
+      "Deadlocks & Race Conditions"
+    ]
+  },
+  {
+    label: 'Spring Boot',
+    icon: '🍃',
+    count: 38,
+    color: '#96CEB4',
+    subCategories: [
+      "Beans & Dependency Injection",
+      "Spring Security",
+      "Spring MVC",
+      "Spring Data JPA",
+      "Spring AOP"
+    ]
+  },
+  {
+    label: 'Microservices',
+    icon: '🔧',
+    count: 42,
+    color: '#FFEAA7',
+    subCategories: [
+      "REST APIs",
+      "Service Registry (Eureka)",
+      "API Gateway",
+      "Circuit Breakers",
+      "Event-Driven Architecture"
+    ]
+  },
+  {
+    label: 'Database & JPA',
+    icon: '🗄️',
+    count: 35,
+    color: '#DDA0DD',
+    subCategories: [
+      "SQL Basics",
+      "Joins & Indexes",
+      "Transactions",
+      "Hibernate Mapping",
+      "Query Optimization"
+    ]
+  },
+  {
+    label: 'Algorithms',
+    icon: '💡',
+    count: 52,
+    color: '#FFA726',
+    subCategories: [
+      "Sorting",
+      "Searching",
+      "Dynamic Programming",
+      "Graphs",
+      "Strings"
+    ]
+  }
 ];
+
 
 const DIFFICULTIES = [
   { label: 'All', count: 0 },
@@ -59,9 +149,10 @@ export default function AddQuestionPage() {
 
   const [formData, setFormData] = useState({
     category: "Core Java",
+    subCategory: "OOP Concepts",
     difficulty: "Medium",
     question: "",
-    answer: "<p>Start writing your answer here...</p>",
+    answer: "",
     tags: "",
     explanation: "",
     complexity: "",
@@ -201,6 +292,20 @@ export default function AddQuestionPage() {
                 </Box>
               </Card>
             </Grid>
+            <Grid item xs={12} md={6}>
+              <Card elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <Avatar sx={{ bgcolor: alpha(getCategoryColor(), 0.1), color: getCategoryColor(), width: 48, height: 48 }}>
+                    {CATEGORIES.find(c => c.value === formData.category)?.icon}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Sub-Category</Typography>
+                    <Typography fontWeight={600}>{formData.subCategory}</Typography>
+
+                  </Box>
+                </Box>
+              </Card>
+            </Grid>
 
             <Grid item xs={12} md={6}>
               <Card elevation={0} sx={{ p: 2, borderRadius: 3 }}>
@@ -276,7 +381,7 @@ export default function AddQuestionPage() {
                             <Grid item xs={12} sm={6}>
                               <FormControl fullWidth required>
                                 <InputLabel>Category</InputLabel>
-                                <Select value={formData.category} label="Category" onChange={(e) => handleChange("category", e.target.label)} sx={{ borderRadius: 3 }}>
+                                <Select value={formData.category} label="Category" onChange={(e) => handleChange("category", e.target.value)} sx={{ borderRadius: 3 }}>
                                   {CATEGORIES.map(cat => <MenuItem key={cat.label} value={cat.label}>{cat.label}</MenuItem>)}
                                 </Select>
                               </FormControl>
@@ -284,8 +389,25 @@ export default function AddQuestionPage() {
 
                             <Grid item xs={12} sm={6}>
                               <FormControl fullWidth required>
+                                <InputLabel>Sub-Category</InputLabel>
+                                <Select
+                                  value={formData.subCategory}
+                                  label="Sub-Category"
+                                  onChange={(e) => handleChange("subCategory", e.target.value)}
+                                  sx={{ borderRadius: 3 }}
+                                >
+                                  {CATEGORIES.find(c => c.label === formData.category)?.subCategories
+                                    .map((sub, i) => (
+                                      <MenuItem key={i} value={sub}>{sub}</MenuItem>
+                                    ))}
+                                </Select>
+                              </FormControl>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <FormControl fullWidth required>
                                 <InputLabel>Difficulty</InputLabel>
-                                <Select value={formData.difficulty} label="Difficulty" onChange={(e) => handleChange("difficulty", e.target.label)} sx={{ borderRadius: 3 }}>
+                                <Select value={formData.difficulty} label="Difficulty" onChange={(e) => handleChange("difficulty", e.target.value)} sx={{ borderRadius: 3 }}>
                                   {DIFFICULTIES.map(diff => <MenuItem key={diff.label} value={diff.label}>{diff.label}</MenuItem>)}
                                 </Select>
                               </FormControl>
@@ -349,14 +471,67 @@ export default function AddQuestionPage() {
                           </AccordionDetails>
                         </Accordion>
 
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4, pt: 4, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                          <Box sx={{ display: "flex", gap: 2 }}>
-                            <Button variant="outlined" onClick={handleCancel} disabled={loading} sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}>Cancel</Button>
-                            <Button variant="outlined" onClick={() => setPreviewMode(true)} startIcon={<Visibility />} sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}>Preview</Button>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: { xs: "column", sm: "row" },
+                            justifyContent: "space-between",
+                            gap: { xs: 3, sm: 0 },
+                            mt: 4,
+                            pt: 4,
+                            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+                          }}
+                        >
+                          {/* Left Buttons */}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: { xs: "column", sm: "row" },
+                              gap: 2,
+                              width: { xs: "100%", sm: "auto" }
+                            }}
+                          >
+                            <Button
+                              fullWidth={true}
+                              variant="outlined"
+                              onClick={handleCancel}
+                              disabled={loading}
+                              sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}
+                            >
+                              Cancel
+                            </Button>
+
+                            <Button
+                              fullWidth={true}
+                              variant="outlined"
+                              onClick={() => setPreviewMode(true)}
+                              startIcon={<Visibility />}
+                              sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}
+                            >
+                              Preview
+                            </Button>
                           </Box>
 
-                          <Box sx={{ display: "flex", gap: 2 }}>
-                            <Button type="submit" variant="contained" disabled={loading} startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Save />} sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}>
+                          {/* Right Button */}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: { xs: "column", sm: "row" },
+                              gap: 2,
+                              width: { xs: "100%", sm: "auto" },
+                              mt: { xs: 1, sm: 0 }
+                            }}
+                          >
+                            <Button
+                              fullWidth={true}
+                              type="submit"
+                              variant="contained"
+                              disabled={loading}
+                              startIcon={
+                                loading ? <CircularProgress size={20} color="inherit" /> : <Save />
+                              }
+                              sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}
+                            >
                               {loading ? "Adding Question..." : "Save Question"}
                             </Button>
                           </Box>
@@ -367,9 +542,10 @@ export default function AddQuestionPage() {
                 </Fade>
               </Box>
             </Box>
-          )}
-        </Container>
-      </Box>
-    </ProtectedRoute>
+          )
+          }
+        </Container >
+      </Box >
+    </ProtectedRoute >
   );
 }
