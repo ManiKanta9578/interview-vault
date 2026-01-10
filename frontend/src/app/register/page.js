@@ -5,8 +5,12 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
   Container, Paper, Typography, TextField, Button, Box, Alert,
-  Link as MuiLink, useTheme, useMediaQuery
+  useTheme, useMediaQuery, alpha, InputAdornment, IconButton
 } from '@mui/material';
+import { 
+  Terminal, Person, Email, Key, Badge, ArrowForward, 
+  Visibility, VisibilityOff, Lock 
+} from '@mui/icons-material';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -16,6 +20,7 @@ export default function RegisterPage() {
     confirmPassword: '',
     fullName: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -57,123 +62,238 @@ export default function RegisterPage() {
   };
 
   return (
-    <Container 
-      maxWidth="sm" 
-      sx={{ 
-        py: { xs: 4, sm: 6, md: 8 }, 
-        px: { xs: 2, sm: 3 },
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-    >
-      <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 }, width: '100%' }}>
-        <Typography 
-          variant="h4" 
-          align="center" 
-          gutterBottom 
-          fontWeight={600}
-          sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
+    <Box sx={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      bgcolor: 'background.default',
+      position: 'relative',
+      overflow: 'hidden',
+      py: 4
+    }}>
+      
+      {/* 1. Background Effects */}
+      <Box sx={{
+        position: 'absolute', inset: 0, zIndex: 0, opacity: 0.3, pointerEvents: 'none',
+        backgroundImage: `linear-gradient(${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px)`,
+        backgroundSize: '40px 40px',
+      }} />
+      
+      <Box sx={{
+        position: 'absolute',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '800px', height: '800px',
+        background: `radial-gradient(circle, ${alpha(theme.palette.success.main, 0.08)} 0%, transparent 70%)`,
+        filter: 'blur(80px)',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+
+      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: { xs: 3, sm: 5 }, 
+            width: '100%',
+            bgcolor: alpha(theme.palette.background.paper, 0.6),
+            backdropFilter: 'blur(12px)',
+            border: '1px solid',
+            borderColor: alpha(theme.palette.divider, 0.1),
+            borderRadius: 3,
+            boxShadow: `0 8px 32px ${alpha('#000', 0.1)}`
+          }}
         >
-          Create Account
-        </Typography>
-        <Typography 
-          variant="body2" 
-          align="center" 
-          color="text.secondary" 
-          paragraph
-          sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
-        >
-          Join us and start preparing for your interviews
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-          <TextField
-            fullWidth
-            label="Username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-            sx={{ mb: 2 }}
-            size={isMobile ? "small" : "medium"}
-          />
-
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            sx={{ mb: 2 }}
-            size={isMobile ? "small" : "medium"}
-          />
-
-          <TextField
-            fullWidth
-            label="Full Name"
-            name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
-            sx={{ mb: 2 }}
-            size={isMobile ? "small" : "medium"}
-          />
-
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            helperText="Minimum 6 characters"
-            sx={{ mb: 2 }}
-            size={isMobile ? "small" : "medium"}
-          />
-
-          <TextField
-            fullWidth
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-            sx={{ mb: 3 }}
-            size={isMobile ? "small" : "medium"}
-          />
-
-          <Button
-            fullWidth
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={loading}
-            sx={{ mb: 2, py: { xs: 1.5, sm: 2 } }}
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </Button>
-
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-              Already have an account?{' '}
-              <Link href="/login" passHref legacyBehavior>
-                <MuiLink sx={{ cursor: 'pointer' }}>Sign In</MuiLink>
-              </Link>
+          {/* Header */}
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Box sx={{ 
+              width: 48, height: 48, mx: 'auto', mb: 2, 
+              borderRadius: 2, 
+              bgcolor: alpha(theme.palette.success.main, 0.1),
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: theme.palette.success.main
+            }}>
+              <Terminal fontSize="medium" />
+            </Box>
+            <Typography variant="h5" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: '-0.5px' }}>
+              Initialize Account
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Create a new user profile in the system
             </Typography>
           </Box>
-        </Box>
-      </Paper>
-    </Container>
+
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3, 
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.error.main, 0.1),
+                color: theme.palette.error.main,
+                border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit}>
+            
+            {/* Username */}
+            <TextField
+              fullWidth
+              label="Username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Badge sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            {/* Email */}
+            <TextField
+              fullWidth
+              label="Email Address"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            {/* Full Name */}
+            <TextField
+              fullWidth
+              label="Full Name"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Person sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            {/* Password */}
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              required
+              helperText="Minimum 6 characters"
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Key sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            {/* Confirm Password */}
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              name="confirmPassword"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              sx={{ mb: 4 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            <Button
+              fullWidth
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading}
+              endIcon={!loading && <ArrowForward />}
+              sx={{ 
+                mb: 3, 
+                py: 1.5,
+                borderRadius: 2,
+                fontWeight: 600,
+                textTransform: 'none',
+                fontSize: '1rem',
+                boxShadow: 'none',
+                bgcolor: 'text.primary',
+                color: 'background.default',
+                '&:hover': {
+                  bgcolor: 'text.secondary',
+                  boxShadow: `0 0 20px ${alpha(theme.palette.text.primary, 0.3)}`
+                }
+              }}
+            >
+              {loading ? 'Creating Profile...' : 'Execute Registration'}
+            </Button>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Already have credentials?{' '}
+                <Link href="/login" style={{ textDecoration: 'none' }}>
+                  <Box component="span" sx={{ 
+                    color: theme.palette.primary.main, 
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    '&:hover': { textDecoration: 'underline' }
+                  }}>
+                    Sign In
+                  </Box>
+                </Link>
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 }

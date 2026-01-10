@@ -1,28 +1,20 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Grid, Card, CardContent, Button, 
-  Avatar, Paper, Chip, alpha 
+  Avatar, Paper, Chip, alpha, useTheme, useMediaQuery, LinearProgress, IconButton, Divider
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { useState, useEffect } from 'react';
-import { useTheme, useMediaQuery } from '@mui/material';
 import {
-  Search as SearchIcon,
-  Add as AddIcon,
-  MenuBook as MenuBookIcon,
-  TrendingUp as TrendingUpIcon,
-  Bolt as BoltIcon,
-  ArrowForward as ArrowForwardIcon,
-  BarChart as BarChartIcon,
-  Timeline as TimelineIcon,
-  LibraryBooks as LibraryBooksIcon
+  Search, Add, MenuBook, TrendingUp, Bolt, ArrowForward, 
+  BarChart, Timeline, LibraryBooks, Terminal, Code, 
+  Commit, History, BugReport, PlayArrow, Storage
 } from '@mui/icons-material';
 
-// Mock API
+// Mock API (Keep your existing mock)
 const questionsAPI = {
   getAll: async () => ({
     data: Array.from({ length: 245 }, (_, i) => ({ id: i + 1 }))
@@ -61,382 +53,351 @@ export default function DashboardPage() {
     }
   };
 
+  // 1. Stats Redesigned as "System Metrics"
   const statCards = [
     {
-      title: 'Total Questions',
+      title: 'BUFFER_SIZE', // Total Questions
+      subtitle: 'Total Questions',
       value: stats.total,
-      icon: <LibraryBooksIcon />,
+      icon: <Storage />,
       color: theme.palette.primary.main,
       path: '/questions'
     },
     {
-      title: 'Studied',
+      title: 'PROCESSED', // Studied
+      subtitle: 'Questions Solved',
       value: stats.studied,
-      icon: <MenuBookIcon />,
+      icon: <Code />,
       color: theme.palette.success.main,
       progress: (stats.studied / stats.total) * 100,
       path: '/progress'
     },
     {
-      title: 'Accuracy',
+      title: 'SUCCESS_RATE', // Accuracy
+      subtitle: 'Accuracy',
       value: `${stats.accuracy}%`,
-      icon: <TrendingUpIcon />,
-      color: theme.palette.info.main,
+      icon: <BugReport />, // Using Bug icon for accuracy/debugging metaphor
+      color: theme.palette.error.main, // Red/Pink for bugs/accuracy
       path: '/analytics'
     },
     {
-      title: 'Pending',
+      title: 'QUEUE', // Pending
+      subtitle: 'Pending Review',
       value: stats.pending,
-      icon: <BoltIcon />,
+      icon: <History />,
       color: theme.palette.warning.main,
       path: '/pending'
     },
   ];
 
+  // 2. Actions Redesigned as "Terminal Commands"
   const quickActions = [
     {
-      title: 'Browse Questions',
-      description: 'Explore question bank',
-      icon: <SearchIcon />,
-      path: '/questions',
-      color: theme.palette.primary.main
-    },
-    {
-      title: 'Add Question',
-      description: 'Contribute new content',
-      icon: <AddIcon />,
-      path: '/add-question',
+      cmd: 'npm run start:quiz',
+      desc: 'Start a quick practice session',
+      icon: <PlayArrow />,
+      path: '/practice',
       color: theme.palette.success.main
     },
     {
-      title: 'Practice Now',
-      description: 'Quick quiz session',
-      icon: <BoltIcon />,
-      path: '/practice',
-      color: theme.palette.warning.main
+      cmd: 'git checkout -b new-question',
+      desc: 'Contribute a new question',
+      icon: <Add />,
+      path: '/add-question',
+      color: theme.palette.info.main
     },
     {
-      title: 'View Progress',
-      description: 'Track your learning',
-      icon: <TimelineIcon />,
-      path: '/progress',
-      color: theme.palette.info.main
+      cmd: 'grep "search"',
+      desc: 'Browse the question bank',
+      icon: <Search />,
+      path: '/questions',
+      color: theme.palette.primary.main
     },
   ];
 
+  // 3. Activity Redesigned as "Git Log"
   const recentActivity = [
-    { action: 'Completed', topic: 'React Hooks', time: '2h ago' },
-    { action: 'Reviewed', topic: 'System Design', time: '1d ago' },
-    { action: 'Added', topic: 'New Question', time: '2d ago' },
+    { hash: 'a1b2c3d', action: 'feat(hooks): completed React Hooks module', time: '2h ago', status: 'merged' },
+    { hash: 'e5f6g7h', action: 'docs(sys-design): reviewed caching patterns', time: '1d ago', status: 'review' },
+    { hash: 'i8j9k0l', action: 'chore: added new interview question', time: '2d ago', status: 'commit' },
   ];
 
   return (
     <ProtectedRoute>
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
-          
-          {/* Header */}
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: { xs: 'column', sm: 'row' }, 
-              justifyContent: 'space-between',
-              alignItems: { xs: 'flex-start', sm: 'center' },
-              gap: 2,
-              mb: 3
-            }}>
-              <Box>
-                <Typography variant="h1" sx={{ 
-                  fontSize: { xs: '1.5rem', sm: '2rem' },
-                  fontWeight: 700,
-                  mb: 1
-                }}>
-                  Welcome back, {user?.fullName?.split(' ')[0] || user?.username}! 👋
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Continue your interview prep journey
-                </Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    bgcolor: theme.palette.primary.main
-                  }}
-                >
-                  {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
-                </Avatar>
-                {!isMobile && (
-                  <Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      {user?.fullName || user?.username}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Box>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', position: 'relative', overflow: 'hidden' }}>
+        
+        {/* Background Grid (Consistent with Home) */}
+        <Box sx={{
+          position: 'fixed', inset: 0, zIndex: 0, opacity: 0.3, pointerEvents: 'none',
+          backgroundImage: `linear-gradient(${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }} />
 
-            {/* Stats Cards */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              {statCards.map((card, index) => (
-                <Grid item xs={6} sm={3} key={index}>
-                  <Paper
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                      height: '100%',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        borderColor: alpha(card.color, 0.3),
-                      }
-                    }}
-                    onClick={() => router.push(card.path)}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                      <Box sx={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 1.5,
-                        bgcolor: alpha(card.color, 0.1),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 1.5
-                      }}>
-                        {React.cloneElement(card.icon, { sx: { color: card.color, fontSize: '1.2rem' } })}
-                      </Box>
-                      <Typography variant="caption" color="text.secondary">
-                        {card.title}
-                      </Typography>
-                    </Box>
-                    <Typography variant="h4" sx={{ fontSize: '1.5rem', fontWeight: 700, mb: 1 }}>
-                      {card.value}
-                    </Typography>
-                    {card.progress && (
-                      <Box sx={{ mt: 1 }}>
-                        <Box sx={{
-                          width: '100%',
-                          height: 4,
-                          bgcolor: alpha(card.color, 0.1),
-                          borderRadius: 2,
-                          overflow: 'hidden'
-                        }}>
-                          <Box sx={{
-                            width: `${card.progress}%`,
-                            height: '100%',
-                            bgcolor: card.color,
-                            borderRadius: 2
-                          }} />
-                        </Box>
-                      </Box>
-                    )}
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
+        <Container maxWidth="xl" sx={{ py: 4, px: { xs: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
+          
+          {/* Header - "Terminal Session" Look */}
+          <Box sx={{ mb: 5, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ width: 56, height: 56, bgcolor: alpha(theme.palette.primary.main, 0.2), color: theme.palette.primary.main, border: `1px solid ${theme.palette.primary.main}` }}>
+              {user?.username?.charAt(0) || 'U'}
+            </Avatar>
+            <Box>
+              <Typography variant="h4" sx={{ fontFamily: 'monospace', fontWeight: 700, display: 'flex', alignItems: 'center' }}>
+                <Box component="span" sx={{ color: theme.palette.primary.main, mr: 1 }}>root@</Box>
+                {user?.username || 'developer'}:~
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                Last login: {new Date().toLocaleDateString()} on ttys001
+              </Typography>
+            </Box>
           </Box>
 
-          {/* Main Content */}
-          <Grid container spacing={3}>
-            {/* Left Column */}
+          {/* Stats Grid - "System Monitor" */}
+          <Grid container spacing={3} sx={{ mb: 5 }}>
+            {statCards.map((card, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <Paper
+                  sx={{
+                    p: 2.5,
+                    height: '100%',
+                    bgcolor: alpha(theme.palette.background.paper, 0.6),
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid',
+                    borderColor: alpha(card.color, 0.3),
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: `0 0 20px ${alpha(card.color, 0.2)}`
+                    }
+                  }}
+                  onClick={() => router.push(card.path)}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ fontFamily: 'monospace', color: alpha(theme.palette.text.primary, 0.6), display: 'block' }}>
+                        {card.title}
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontFamily: 'monospace', fontWeight: 700, my: 0.5 }}>
+                        {card.value}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ p: 1, borderRadius: 1, bgcolor: alpha(card.color, 0.1), color: card.color }}>
+                      {card.icon}
+                    </Box>
+                  </Box>
+                  
+                  {/* Progress Bar / Decorator */}
+                  {card.progress !== undefined ? (
+                    <Box sx={{ mt: 2 }}>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={card.progress} 
+                        sx={{ 
+                          height: 6, 
+                          borderRadius: 3, 
+                          bgcolor: alpha(card.color, 0.1),
+                          '& .MuiLinearProgress-bar': { bgcolor: card.color }
+                        }} 
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontFamily: 'monospace' }}>
+                        {Math.round(card.progress)}% COMPLETED
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: card.color, fontFamily: 'monospace' }}>
+                      ● ONLINE
+                    </Typography>
+                  )}
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Grid container spacing={4}>
+            {/* Main Column */}
             <Grid item xs={12} lg={8}>
-              {/* Quick Actions */}
-              <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                Quick Actions
+              
+              {/* Quick Actions - "Command Palette" */}
+              <Typography variant="h6" sx={{ mb: 2, fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
+                <Terminal sx={{ mr: 1, fontSize: 20 }} /> Available Commands
               </Typography>
-              <Grid container spacing={2} sx={{ mb: 4 }}>
+              
+              <Grid container spacing={2} sx={{ mb: 5 }}>
                 {quickActions.map((action, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <Card
+                  <Grid item xs={12} key={index}>
+                    <Paper
+                      onClick={() => router.push(action.path)}
                       sx={{
-                        height: '100%',
+                        p: 2,
+                        bgcolor: alpha(theme.palette.background.paper, 0.4),
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.divider, 0.1),
                         borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                         '&:hover': {
-                          borderColor: alpha(action.color, 0.3),
-                          transform: 'translateY(-2px)',
+                          bgcolor: alpha(action.color, 0.1),
+                          borderColor: action.color,
+                          '& .cmd-text': { color: action.color }
                         }
                       }}
-                      onClick={() => router.push(action.path)}
                     >
-                      <CardContent sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Box sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 1.5,
-                            bgcolor: alpha(action.color, 0.1),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            mr: 1.5
-                          }}>
-                            {React.cloneElement(action.icon, { 
-                              sx: { color: action.color, fontSize: '1.2rem' } 
-                            })}
-                          </Box>
-                          <Box>
-                            <Typography variant="subtitle2" fontWeight={600}>
-                              {action.title}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {action.description}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </CardContent>
-                    </Card>
+                      <Box sx={{ mr: 2, color: 'text.secondary' }}>
+                        <Typography variant="h6" sx={{ fontFamily: 'monospace', color: 'text.disabled' }}>$</Typography>
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography className="cmd-text" variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 600, mb: 0.5 }}>
+                          {action.cmd}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                          // {action.desc}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ color: 'text.disabled' }}>
+                        <ArrowForward fontSize="small" />
+                      </Box>
+                    </Paper>
                   </Grid>
                 ))}
               </Grid>
 
-              {/* Recent Activity */}
+              {/* Activity Log - "Git Log" */}
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" fontWeight={600}>
-                    Recent Activity
+                  <Typography variant="h6" sx={{ fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
+                    <History sx={{ mr: 1, fontSize: 20 }} /> git log --oneline
                   </Typography>
-                  <Button size="small" sx={{ textTransform: 'none' }}>
-                    View All
-                  </Button>
                 </Box>
-                <Paper sx={{ borderRadius: 2 }}>
-                  {recentActivity.map((activity, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        p: 2,
-                        borderBottom: index < recentActivity.length - 1 
-                          ? `1px solid ${alpha(theme.palette.divider, 0.1)}` 
-                          : 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        '&:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.02)
-                        }
-                      }}
-                    >
-                      <Box sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 2
-                      }}>
-                        {activity.action === 'Completed' ? (
-                          <TrendingUpIcon sx={{ fontSize: '1rem', color: theme.palette.success.main }} />
-                        ) : (
-                          <MenuBookIcon sx={{ fontSize: '1rem', color: theme.palette.primary.main }} />
-                        )}
-                      </Box>
+                <Paper sx={{ 
+                  bgcolor: '#0d1117', // Github dark bg style
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.divider, 0.2),
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  fontFamily: 'monospace'
+                }}>
+                  {recentActivity.map((item, index) => (
+                    <Box key={index} sx={{ 
+                      p: 2, 
+                      borderBottom: index !== recentActivity.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'flex-start', sm: 'center' },
+                      gap: 2,
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }
+                    }}>
+                      <Typography variant="caption" sx={{ color: theme.palette.warning.main, minWidth: 80 }}>
+                        <Commit sx={{ fontSize: 14, verticalAlign: 'middle', mr: 0.5 }} />
+                        {item.hash}
+                      </Typography>
+                      
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" fontWeight={500}>
-                          {activity.action} - {activity.topic}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {activity.time}
+                        <Typography variant="body2" sx={{ color: '#e6edf3', fontFamily: 'monospace' }}>
+                          {item.action}
                         </Typography>
                       </Box>
-                      <Chip 
-                        label={activity.action} 
-                        size="small"
-                        color={activity.action === 'Completed' ? 'success' : 'primary'}
-                        variant="outlined"
-                        sx={{ height: 20, fontSize: '0.7rem' }}
-                      />
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Chip 
+                          label={item.status} 
+                          size="small" 
+                          sx={{ 
+                            height: 20, 
+                            fontSize: '0.7rem', 
+                            fontFamily: 'monospace',
+                            bgcolor: item.status === 'merged' ? alpha(theme.palette.success.main, 0.2) : alpha(theme.palette.info.main, 0.2),
+                            color: item.status === 'merged' ? theme.palette.success.main : theme.palette.info.main,
+                            border: '1px solid transparent'
+                          }} 
+                        />
+                        <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 60, textAlign: 'right' }}>
+                          {item.time}
+                        </Typography>
+                      </Box>
                     </Box>
                   ))}
                 </Paper>
               </Box>
             </Grid>
 
-            {/* Sidebar */}
+            {/* Sidebar - "Documentation / Readme" */}
             <Grid item xs={12} lg={4}>
-              <Box sx={{ position: 'sticky', top: 24 }}>
-                {/* Study Tips */}
-                <Paper sx={{ p: 2, borderRadius: 2, mb: 3 }}>
-                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <BarChartIcon sx={{ fontSize: '1.2rem' }} /> Study Tips
+              <Paper sx={{ 
+                p: 3, 
+                borderRadius: 2, 
+                bgcolor: alpha(theme.palette.background.paper, 0.6),
+                backdropFilter: 'blur(10px)',
+                border: '1px solid',
+                borderColor: alpha(theme.palette.divider, 0.1)
+              }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 3, fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
+                  <MenuBook sx={{ mr: 1 }} /> README.md
+                </Typography>
+
+                {/* Daily Streak */}
+                <Box sx={{ mb: 4 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                      CURRENT_STREAK
+                    </Typography>
+                    <Typography variant="caption" color="success.main" sx={{ fontFamily: 'monospace' }}>
+                      7 DAYS
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    {[...Array(7)].map((_, i) => (
+                      <Box key={i} sx={{ 
+                        flex: 1, 
+                        height: 8, 
+                        bgcolor: theme.palette.success.main, 
+                        opacity: 0.4 + (i * 0.1), // Gradient effect
+                        borderRadius: 1 
+                      }} />
+                    ))}
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* Topics */}
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block', fontFamily: 'monospace' }}>
+                  RECOMMENDED_MODULES
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {['React Hooks', 'System Design', 'Algorithms', 'Docker'].map((topic) => (
+                    <Chip
+                      key={topic}
+                      label={topic}
+                      size="small"
+                      onClick={() => router.push(`/questions?topic=${topic}`)}
+                      sx={{ 
+                        fontFamily: 'monospace',
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        color: theme.palette.primary.main,
+                        border: '1px solid transparent',
+                        '&:hover': {
+                          border: `1px solid ${theme.palette.primary.main}`
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                {/* Quote of the day style tip */}
+                <Box sx={{ mt: 4, p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2, borderLeft: `3px solid ${theme.palette.info.main}` }}>
+                  <Typography variant="caption" sx={{ fontFamily: 'monospace', color: theme.palette.info.main }}>
+                    // TODO:
                   </Typography>
-                  
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-                      Daily Goal
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ flex: 1, height: 6, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 3 }}>
-                        <Box sx={{ width: '65%', height: '100%', bgcolor: theme.palette.primary.main, borderRadius: 3 }} />
-                      </Box>
-                      <Typography variant="caption" fontWeight={500}>13/20</Typography>
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" fontWeight={500} sx={{ mb: 1, display: 'block' }}>
-                      Recommended Topics
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {['React Hooks', 'System Design', 'Algorithms'].map((topic) => (
-                        <Chip
-                          key={topic}
-                          label={topic}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => router.push(`/questions?topic=${topic}`)}
-                          sx={{ fontSize: '0.7rem' }}
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-
-                  <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                      <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: alpha(theme.palette.success.main, 0.05) }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Streak
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          7 days
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: alpha(theme.palette.warning.main, 0.05) }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Avg. Time
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          24 min
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Paper>
-
-                {/* Start Practice */}
-                <Button
-                  fullWidth
-                  variant="contained"
-                  startIcon={<BoltIcon />}
-                  sx={{
-                    borderRadius: 2,
-                    fontWeight: 600,
-                  }}
-                  onClick={() => router.push('/practice')}
-                >
-                  Start Practice
-                </Button>
-              </Box>
+                  <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85rem' }}>
+                    "Consistency is key. Committing code daily builds a GitHub streak; solving problems daily builds a career."
+                  </Typography>
+                </Box>
+              </Paper>
             </Grid>
+
           </Grid>
         </Container>
       </Box>

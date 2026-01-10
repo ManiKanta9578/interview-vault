@@ -4,19 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Container, Paper, Typography, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, Alert,
-  CircularProgress, Stack, Chip, alpha, Card, Grid, Tabs, Tab
+  CircularProgress, Stack, Chip, alpha, Card, Grid, Tabs, Tab, useTheme, useMediaQuery, InputAdornment, Divider
 } from "@mui/material";
 import {
   Save, ArrowBack, AddCircle, CheckCircle, Category,
-  Help, Visibility, Edit, QuestionAnswer
+  Help, Visibility, Edit, QuestionAnswer, Terminal, 
+  Code, Description, Storage, Tune, PlayArrow, Close
 } from "@mui/icons-material";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { questionsAPI, categoryAPI } from "@/lib/api";
-import { useTheme, useMediaQuery } from "@mui/material";
 import ReactQuillEditor from "@/components/editor/ReactQuillEditor";
 import ReactQuillViewer from "@/components/editor/ReactQuillViewer";
-
 import DOMPurify from "dompurify";
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
@@ -29,9 +28,10 @@ export default function AddQuestionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false); // false = Edit, true = Preview
   const [wordCount, setWordCount] = useState(0);
   const [categories, setCategories] = useState([]);
+  
   const [formData, setFormData] = useState({
     category: "",
     subCategory: "",
@@ -41,7 +41,9 @@ export default function AddQuestionPage() {
     tags: "",
   });
 
+  // ... (Keep existing htmlToPlain and handleChange logic) ...
   const htmlToPlain = (html = "") => {
+    if (typeof window === 'undefined') return "";
     const clean = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
     return clean.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   };
@@ -73,13 +75,13 @@ export default function AddQuestionPage() {
     setSuccess(false);
 
     if (!formData.question.trim()) {
-      setError("Please enter the question");
+      setError("Error: Question field cannot be empty");
       return;
     }
 
     const plainAnswer = htmlToPlain(formData.answer);
     if (!plainAnswer || plainAnswer.length < 5) {
-      setError("Please provide a meaningful answer (min 5 characters)");
+      setError("Error: Answer content is too short (min 5 chars)");
       return;
     }
 
@@ -92,289 +94,312 @@ export default function AddQuestionPage() {
 
       await questionsAPI.create(payload);
       setSuccess(true);
-
       setTimeout(() => router.push("/questions"), 1200);
     } catch (err) {
       console.error("Error adding question:", err);
-      setError(err?.message || "Failed to add question");
+      setError(err?.message || "Failed to commit question to database");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    if (formData.question || htmlToPlain(formData.answer)) {
-      if (window.confirm("Are you sure? Your changes will be lost.")) {
-        router.push("/questions");
+  // Fetch Categories logic
+  useEffect(() => {
+    const loadCats = async () => {
+      try {
+        let res = await categoryAPI.getAll();
+        setCategories(res.data);
+        if (res.data && res.data.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            category: res.data[0].label,
+            subCategory: res.data[0].subCategories?.[0] || ""
+          }));
+        }
+      } catch (error) {
+        console.log("Error loading categories", error);
       }
-    } else {
-      router.push("/questions");
-    }
-  };
-
-  const _getCatergories = async () => {
-    try {
-      let res = await categoryAPI.getAll();
-      setCategories(res.data);
-    } catch (error) {
-      console.log(error, "Error while fetching categories");
-      setCategories([]);
-    }
-  }
-
-  useEffect(() => {
-    if (Array.isArray(categories) && categories.length > 0) {
-      const firstCategory = categories[0];
-      setFormData(prev => ({
-        ...prev,
-        category: firstCategory.label,
-        subCategory: firstCategory.subCategories?.[0] || "",
-      }));
-    }
-  }, [categories]);
-
-  useEffect(() => {
-    _getCatergories();
+    };
+    loadCats();
   }, []);
 
-  const renderPreview = () => (
-    <Box>
-      <Paper sx={{ p: 3, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, mb: 3 }}>
-        <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>Preview</Typography>
-
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Card sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-              <Typography variant="body1" fontWeight={500}>
-                {formData.question || "No question entered"}
-              </Typography>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Card sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.05) }}>
-              <Box sx={{ mt: 1 }}>
-                <ReactQuillViewer value={formData.answer} />
-              </Box>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5 }}>
-              <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Category sx={{ fontSize: '1rem', color: theme.palette.primary.main }} />
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Category</Typography>
-                <Typography variant="body2" fontWeight={500}>{formData.category}</Typography>
-              </Box>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5 }}>
-              <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: alpha(theme.palette.info.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography sx={{ color: theme.palette.info.main, fontWeight: 600 }}>D</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Difficulty</Typography>
-                <Typography variant="body2" fontWeight={500}>{formData.difficulty}</Typography>
-              </Box>
-            </Box>
-          </Grid>
+  // Render Functions
+  const renderMetadataPanel = () => (
+    <Paper sx={{ 
+      p: 2, mb: 3, 
+      bgcolor: alpha(theme.palette.background.paper, 0.4),
+      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+      borderRadius: 2
+    }}>
+      <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', mb: 2, display: 'block' }}>
+        // CONFIGURATION
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth size="small">
+            <InputLabel sx={{ fontFamily: 'monospace' }}>CATEGORY</InputLabel>
+            <Select
+              value={formData.category}
+              label="CATEGORY"
+              onChange={(e) => handleChange("category", e.target.value)}
+              sx={{ fontFamily: 'monospace' }}
+            >
+              {categories.map(cat => <MenuItem key={cat.id} value={cat.label} sx={{ fontFamily: 'monospace' }}>{cat.label}</MenuItem>)}
+            </Select>
+          </FormControl>
         </Grid>
-      </Paper>
-    </Box>
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth size="small">
+            <InputLabel sx={{ fontFamily: 'monospace' }}>SUB_MODULE</InputLabel>
+            <Select
+              value={formData.subCategory}
+              label="SUB_MODULE"
+              onChange={(e) => handleChange("subCategory", e.target.value)}
+              sx={{ fontFamily: 'monospace' }}
+            >
+              {categories.find(c => c.label === formData.category)?.subCategories?.map((sub, i) => (
+                <MenuItem key={i} value={sub} sx={{ fontFamily: 'monospace' }}>{sub}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth size="small">
+            <InputLabel sx={{ fontFamily: 'monospace' }}>DIFFICULTY</InputLabel>
+            <Select 
+              value={formData.difficulty} 
+              label="DIFFICULTY" 
+              onChange={(e) => handleChange("difficulty", e.target.value)}
+              sx={{ fontFamily: 'monospace', color: formData.difficulty === 'Hard' ? 'error.main' : formData.difficulty === 'Medium' ? 'warning.main' : 'success.main' }}
+            >
+              {DIFFICULTIES.map(diff => <MenuItem key={diff} value={diff} sx={{ fontFamily: 'monospace' }}>{diff}</MenuItem>)}
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+    </Paper>
   );
 
   return (
     <ProtectedRoute>
-      <Box sx={{ minHeight: "100vh", bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
-        <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2 } }}>
-          {/* Header */}
-          <Box sx={{ mb: 3 }}>
-            <Button startIcon={<ArrowBack />} onClick={handleCancel} sx={{ mb: 2, textTransform: "none" }}>
-              Back
-            </Button>
+      <Box sx={{ minHeight: "100vh", bgcolor: 'background.default', pb: 8, position: 'relative' }}>
+        
+        {/* Background Effects */}
+        <Box sx={{
+          position: 'fixed', inset: 0, zIndex: 0, opacity: 0.3, pointerEvents: 'none',
+          backgroundImage: `linear-gradient(${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }} />
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-              <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: theme.palette.primary.main, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AddCircle sx={{ color: "white", fontSize: "1.5rem" }} />
-              </Box>
-              <Box>
-                <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
-                  Add Question
+        <Container maxWidth="lg" sx={{ pt: 4, position: 'relative', zIndex: 1 }}>
+          
+          {/* Header - "Breadcrumb Path" */}
+          <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Terminal sx={{ color: theme.palette.primary.main }} />
+                <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                  ~/questions/new.md
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Create a new interview question
-                </Typography>
-              </Box>
-            </Box>
-
-            <Paper sx={{ mb: 3, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-              <Tabs value={previewMode ? 1 : 0} onChange={(e, newValue) => setPreviewMode(newValue === 1)}>
-                <Tab label="Edit" />
-                <Tab label="Preview" />
-              </Tabs>
-            </Paper>
+                {formData.question && (
+                  <Chip 
+                    label="Unsaved" 
+                    size="small" 
+                    sx={{ height: 20, fontSize: '0.65rem', bgcolor: 'warning.main', color: 'warning.contrastText' }} 
+                  />
+                )}
+             </Box>
+             <Button 
+                startIcon={<Close />} 
+                onClick={() => router.push("/questions")}
+                sx={{ textTransform: 'none', color: 'text.secondary', fontFamily: 'monospace' }}
+             >
+               discard_changes()
+             </Button>
           </Box>
 
-          {previewMode ? (
-            renderPreview()
-          ) : (
-            <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-              {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }} onClose={() => setError("")}>{error}</Alert>}
-              {success && <Alert severity="success" sx={{ mb: 2, borderRadius: 1 }}>Question added successfully!</Alert>}
+          <Paper 
+            elevation={0}
+            sx={{ 
+              borderRadius: 2, 
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              bgcolor: alpha(theme.palette.background.paper, 0.6),
+              backdropFilter: 'blur(12px)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Editor Tabs */}
+            <Box sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+              <Tabs 
+                value={previewMode ? 1 : 0} 
+                onChange={(e, v) => setPreviewMode(v === 1)}
+                sx={{ 
+                  '& .MuiTab-root': { 
+                    fontFamily: 'monospace', 
+                    textTransform: 'none',
+                    minHeight: 48,
+                    fontWeight: 600
+                  } 
+                }}
+              >
+                <Tab icon={<Edit fontSize="small" />} iconPosition="start" label="EDIT_MODE" />
+                <Tab icon={<Visibility fontSize="small" />} iconPosition="start" label="PREVIEW_OUTPUT" />
+              </Tabs>
+            </Box>
 
-              <Box component="form" onSubmit={handleSubmit}>
+            <Box component="form" onSubmit={handleSubmit} sx={{ p: { xs: 2, md: 4 } }}>
+              
+              {/* Messages */}
+              {error && (
+                <Alert severity="error" icon={<Terminal fontSize="inherit" />} sx={{ mb: 3, fontFamily: 'monospace' }}>
+                  {error}
+                </Alert>
+              )}
+              {success && (
+                <Alert severity="success" icon={<CheckCircle fontSize="inherit" />} sx={{ mb: 3, fontFamily: 'monospace' }}>
+                  Success: Question committed to database.
+                </Alert>
+              )}
+
+              {/* EDITOR MODE */}
+              {!previewMode && (
                 <Stack spacing={3}>
-                  {/* Basic Info */}
+                  
+                  {renderMetadataPanel()}
+
+                  {/* Question Input */}
                   <Box>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-                      Basic Information
-                    </Typography>
-                    <Grid container spacing={2}>
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <FormControl fullWidth size="small">
-                          <InputLabel>Category</InputLabel>
-                          <Select
-                            value={formData.category}
-                            label="Category"
-                            onChange={(e) => handleChange("category", e.target.value)}
-                          >
-                            {Array.isArray(categories) && categories.length > 0
-                              ? categories.map(cat => (
-                                <MenuItem key={cat.id} value={cat.label}>
-                                  {cat.label}
-                                </MenuItem>
-                              ))
-                              : null}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <FormControl fullWidth size="small">
-                          <InputLabel>Sub-Category</InputLabel>
-                          <Select
-                            value={formData.subCategory}
-                            label="Sub-Category"
-                            onChange={(e) => handleChange("subCategory", e.target.value)}
-                          >
-                            {categories?.find(c => c.label === formData.category)?.subCategories
-                              .map((sub, i) => (
-                                <MenuItem key={i} value={sub}>{sub}</MenuItem>
-                              ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <FormControl fullWidth size="small">
-                          <InputLabel>Difficulty</InputLabel>
-                          <Select value={formData.difficulty} label="Difficulty" onChange={(e) => handleChange("difficulty", e.target.value)}>
-                            {DIFFICULTIES.map(diff => <MenuItem key={diff} value={diff}>{diff}</MenuItem>)}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                    </Grid>
-                  </Box>
-
-                  {/* Question */}
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-                      Question
+                    <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', mb: 1, color: 'text.secondary' }}>
+                      // INPUT: Question Title
                     </Typography>
                     <TextField
                       fullWidth
                       multiline
                       rows={2}
+                      placeholder="e.g., Explain the difference between useMemo and useCallback..."
                       value={formData.question}
                       onChange={(e) => handleChange("question", e.target.value)}
-                      placeholder="Enter your question here..."
-                      size="small"
+                      sx={{ 
+                        '& .MuiInputBase-root': { fontFamily: 'monospace', fontSize: '1rem' } 
+                      }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start" sx={{ mt: 1, alignSelf: 'flex-start' }}>
+                            <Help fontSize="small" sx={{ color: 'primary.main' }} />
+                          </InputAdornment>
+                        )
+                      }}
                     />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {formData.question.length}/500 characters
-                    </Typography>
                   </Box>
 
-                  {/* Answer */}
+                  {/* Answer Input */}
                   <Box>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-                      Answer
+                    <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', mb: 1, color: 'text.secondary' }}>
+                      // INPUT: Detailed Answer (Markdown/Rich Text)
                     </Typography>
-                    <Box sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 1 }}>
-                      <ReactQuillEditor value={formData.answer} onChange={(value) => handleChange("answer", value)} />
+                    <Box sx={{ 
+                      border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, 
+                      borderRadius: 1,
+                      bgcolor: alpha(theme.palette.background.default, 0.3),
+                      '& .ql-toolbar': { borderTopLeftRadius: 4, borderTopRightRadius: 4, borderColor: alpha(theme.palette.divider, 0.2) },
+                      '& .ql-container': { borderBottomLeftRadius: 4, borderBottomRightRadius: 4, borderColor: alpha(theme.palette.divider, 0.2), fontFamily: 'monospace' }
+                    }}>
+                      <ReactQuillEditor value={formData.answer} onChange={(val) => handleChange("answer", val)} />
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                      {wordCount} words • Include code examples for clarity
-                    </Typography>
                   </Box>
 
                   {/* Tags */}
                   <Box>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-                      Tags (Optional)
+                    <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', mb: 1, color: 'text.secondary' }}>
+                      // METADATA: Tags
                     </Typography>
                     <TextField
                       fullWidth
+                      size="small"
+                      placeholder="react, hooks, performance (comma separated)"
                       value={formData.tags}
                       onChange={(e) => handleChange("tags", e.target.value)}
-                      placeholder="collections, threading, design-patterns"
-                      size="small"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start"><Storage fontSize="small" /></InputAdornment>
+                      }}
+                      sx={{ '& .MuiInputBase-input': { fontFamily: 'monospace' } }}
                     />
-                    {formData.tags && (
-                      <Box sx={{ mt: 1, display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                        {formData.tags.split(",").filter(t => t.trim()).map((tag, i) => (
-                          <Chip
-                            key={i}
-                            label={tag.trim()}
-                            size="small"
-                            onDelete={() => {
-                              const tags = formData.tags.split(",").filter(t => t.trim() !== tag.trim());
-                              handleChange("tags", tags.join(","));
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    )}
+                    <Box sx={{ mt: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {formData.tags.split(',').filter(t => t.trim()).map((tag, i) => (
+                        <Chip 
+                          key={i} 
+                          label={tag.trim()} 
+                          size="small" 
+                          onDelete={() => {
+                             const newTags = formData.tags.split(',').filter(t => t.trim() !== tag.trim()).join(',');
+                             handleChange("tags", newTags);
+                          }}
+                          sx={{ fontFamily: 'monospace', borderRadius: 1 }} 
+                        />
+                      ))}
+                    </Box>
                   </Box>
 
-                  {/* Actions */}
-                  <Box sx={{ display: 'flex', gap: 2, pt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleCancel}
-                      disabled={loading}
-                      sx={{ flex: 1 }}
-                    >
-                      Cancel
-                    </Button>
-
-                    <Button
-                      variant="outlined"
-                      onClick={() => setPreviewMode(true)}
-                      startIcon={<Visibility />}
-                      sx={{ flex: 1 }}
-                    >
-                      Preview
-                    </Button>
-
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={loading}
-                      startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                      sx={{ flex: 1 }}
-                    >
-                      {loading ? "Saving..." : "Save"}
-                    </Button>
-                  </Box>
                 </Stack>
+              )}
+
+              {/* PREVIEW MODE */}
+              {previewMode && (
+                <Box>
+                  <Card sx={{ mb: 3, border: `1px dashed ${theme.palette.divider}`, bgcolor: 'transparent' }}>
+                    <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.action.hover, 0.05) }}>
+                       <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                         PREVIEW: {`${formData.difficulty} | ${formData.category} > ${formData.subCategory}`}
+                       </Typography>
+                       <Typography variant="h6" sx={{ mt: 1, fontWeight: 600 }}>
+                         {formData.question || "Untitled Question"}
+                       </Typography>
+                    </Box>
+                    <Box sx={{ p: 3 }}>
+                       <ReactQuillViewer value={formData.answer} />
+                    </Box>
+                  </Card>
+                </Box>
+              )}
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* ACTION BAR */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                  {wordCount} words • {formData.question.length} chars
+                </Typography>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button 
+                    onClick={() => setPreviewMode(!previewMode)}
+                    variant="outlined"
+                    startIcon={previewMode ? <Edit /> : <Visibility />}
+                    sx={{ fontFamily: 'monospace', textTransform: 'none' }}
+                  >
+                    {previewMode ? "return_to_edit()" : "preview_render()"}
+                  </Button>
+                  
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Save />}
+                    sx={{ 
+                      fontFamily: 'monospace', 
+                      textTransform: 'none', 
+                      fontWeight: 700,
+                      bgcolor: 'primary.main',
+                      px: 3,
+                      '&:hover': { bgcolor: 'primary.dark' }
+                    }}
+                  >
+                    {loading ? "committing..." : "git push origin"}
+                  </Button>
+                </Box>
               </Box>
-            </Paper>
-          )}
+
+            </Box>
+          </Paper>
         </Container>
       </Box>
     </ProtectedRoute>
