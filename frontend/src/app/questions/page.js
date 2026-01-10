@@ -106,7 +106,7 @@ export default function QuestionsPage() {
           setSelectedSubCategory={setSelectedSubCategory}
         />
 
-        <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Container maxWidth="xl">
 
           {/* Header Section */}
           <Box sx={{ mb: 4, textAlign: 'center' }}>
@@ -408,8 +408,7 @@ function StickyFilterBar({
         position="fixed"
         elevation={0}
         sx={{
-          top: { xs: 56, sm: 64 }, // Matches your main Navbar height
-          zIndex: 1099, // Just below main Navbar
+          zIndex: 1099,
           bgcolor: alpha(theme.palette.background.paper, 0.9),
           backdropFilter: 'blur(10px)',
           borderBottom: `1px solid ${theme.palette.divider}`,

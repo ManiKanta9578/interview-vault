@@ -135,7 +135,7 @@ export default function Navbar() {
 
   return (
     <>
-      <AppBar position="fixed"
+      <AppBar position="static"
         elevation={0}
         sx={{
           borderBottom: 1,
