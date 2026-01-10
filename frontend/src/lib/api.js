@@ -29,6 +29,7 @@ export const questionsAPI = {
   getAll: () => api.get('/questions'),
   getById: (id) => api.get(`/questions/${id}`),
   getByCategory: (category) => api.get(`/questions/category/${category}`),
+  getBySubCategory: (subCategory) => api.get(`/questions/sub-category/${subCategory}`),
   search: (keyword) => api.get(`/questions/search?keyword=${keyword}`),
   create: (data) => api.post('/questions', data),
   update: (id, data) => api.put(`/questions/${id}`, data),

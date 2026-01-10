@@ -4,8 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Container, Paper, Typography, TextField, Button, Box, Alert,
-  Link as MuiLink, useTheme, useMediaQuery
+  Container, Paper, Typography, TextField, Button, Box, Alert, useTheme, useMediaQuery
 } from '@mui/material';
 
 export default function LoginPage() {
@@ -105,9 +104,7 @@ export default function LoginPage() {
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
               Don't have an account?{' '}
-              <Link href="/register" passHref legacyBehavior>
-                <MuiLink sx={{ cursor: 'pointer' }}>Sign Up</MuiLink>
-              </Link>
+              <Link href="/register"> Sign Up </Link>
             </Typography>
           </Box>
         </Box>

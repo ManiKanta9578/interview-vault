@@ -2,421 +2,285 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Container, Typography, Box, TextField, InputAdornment,
-  Chip, Stack, Card, CardContent, Button,
-  Collapse, CircularProgress, Alert, Fab, Paper,
-  IconButton, Drawer, MenuItem, Select, FormControl,
-  Tooltip, alpha, Grid, useTheme, useMediaQuery
+  Container, Typography, Box, TextField, InputAdornment, Chip, Stack, Card, CardContent, Button,
+  Collapse, Fab, Paper, IconButton, Drawer, MenuItem, Select, FormControl, InputLabel,
+  useTheme, alpha, CircularProgress, Tooltip, Divider
 } from '@mui/material';
 import {
-  Search, ExpandMore, Add, FilterList, Close,
-  Bookmark, BookmarkBorder, Share, Edit,
-  ViewList, ViewModule
+  Search, ExpandMore, Add, FilterList, Close, Bookmark, BookmarkBorder, ViewList, ViewModule, Sort, RestartAlt
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { questionsAPI } from '@/lib/api';
+import { categoryAPI, questionsAPI } from '@/lib/api';
 import ReactQuillViewer from '@/components/editor/ReactQuillViewer';
-import { Skeleton } from '@mui/material';
-
-const CATEGORIES = [
-  { label: 'All', icon: '📚', count: 0 },
-  { label: 'Core Java', icon: '☕', count: 45, color: '#FF6B6B' },
-  { label: 'Collections', icon: '📦', count: 32, color: '#4ECDC4' },
-  { label: 'Multithreading', icon: '⚡', count: 28, color: '#45B7D1' },
-  { label: 'Spring Boot', icon: '🍃', count: 38, color: '#96CEB4' },
-  { label: 'Microservices', icon: '🔧', count: 42, color: '#FFEAA7' },
-  { label: 'Database & JPA', icon: '🗄️', count: 35, color: '#DDA0DD' },
-  { label: 'Algorithms', icon: '💡', count: 52, color: '#FFA726' }
-];
-
-const DIFFICULTIES = [
-  { label: 'All', count: 0 },
-  { label: 'Easy', count: 85, color: '#4CAF50' },
-  { label: 'Medium', count: 145, color: '#FF9800' },
-  { label: 'Hard', count: 70, color: '#F44336' }
-];
-
-const SORT_OPTIONS = [
-  { label: 'Newest', value: 'newest' },
-  { label: 'Oldest', value: 'oldest' },
-  { label: 'Easy First', value: 'easy-first' },
-  { label: 'Hard First', value: 'hard-first' },
-  { label: 'Popular', value: 'popular' }
-];
+import { Slide, AppBar, Toolbar } from '@mui/material';
+import useScrollTrigger from '@mui/material/useScrollTrigger';
 
 export default function QuestionsPage() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const router = useRouter();
   const { user } = useAuth();
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState('newest');
   const [bookmarked, setBookmarked] = useState([]);
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetchQuestions();
-  }, []);
+  const [isClient, setIsClient] = useState(false);
 
   const fetchQuestions = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await questionsAPI.getAll();
-      setQuestions(response.data);
-    } catch (err) {
-      setError('Failed to load questions');
-      console.error('Error:', err);
+      const res = selectedSubCategory
+        ? await questionsAPI.getBySubCategory(selectedSubCategory)
+        : selectedCategory
+          ? await questionsAPI.getByCategory(selectedCategory)
+          : await questionsAPI.getAll();
+
+      setQuestions(res.data);
+    } catch (error) {
+      console.error('Failed to load questions:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredQuestions = questions.filter((q) => {
-    const matchesCategory = selectedCategory === 'All' || q.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === 'All' || q.difficulty === selectedDifficulty;
-    const matchesSearch = searchTerm === '' ||
-      q.question.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesCategory && matchesDifficulty && matchesSearch;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        return new Date(b.lastReviewed) - new Date(a.lastReviewed);
-      case 'oldest':
-        return new Date(a.lastReviewed) - new Date(b.lastReviewed);
-      case 'easy-first': {
-        const order = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-        return (order[a.difficulty] || 0) - (order[b.difficulty] || 0);
+  const loadCategories = async () => {
+    try {
+      const res = await categoryAPI.getAll();
+      setCategories(res.data);
+      if (res.data && res.data.length > 0) {
+        setSelectedCategory(res.data[0].label);
       }
-      case 'hard-first': {
-        const order = { 'Easy': 3, 'Medium': 2, 'Hard': 1 };
-        return (order[a.difficulty] || 0) - (order[b.difficulty] || 0);
-      }
-      default:
-        return 0;
+    } catch (error) {
+      console.error('Failed to load categories:', error);
     }
-  });
+  };
+
+  useEffect(() => {
+    setIsClient(true);
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchQuestions();
+    }
+  }, [selectedCategory, selectedSubCategory, isClient]);
 
   const toggleBookmark = (id) => {
     setBookmarked(prev =>
-      prev.includes(id) ? prev.filter(bookmarkId => bookmarkId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter(bid => bid !== id) : [...prev, id]
     );
-  };
-
-  const handleQuestionAction = (action, question) => {
-    switch (action) {
-      case 'edit':
-        router.push(`/edit-question/${question.id}`);
-        break;
-      case 'share':
-        navigator.clipboard.writeText(`${window.location.origin}/question/${question.id}`);
-        break;
-    }
   };
 
   const clearFilters = () => {
-    setSelectedCategory('All');
-    setSelectedDifficulty('All');
-    setSearchTerm('');
+    if (categories.length > 0) setSelectedCategory(categories[0].label);
+    setSelectedSubCategory("");
+    setSearch("");
   };
 
-  if (loading) {
-    return (
-      <ProtectedRoute>
-        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-          <Container maxWidth="xl" sx={{ py: 3, px: { xs: 2, md: 3 } }}>
+  // Improved filter check
+  const hasFilters = search !== "" || selectedSubCategory !== "";
 
-            {/* Simplified header */}
-            <Skeleton variant="rounded" height={48} sx={{ mb: 3, borderRadius: 2 }} />
-
-            <Grid container spacing={2}>
-              {[...Array(3)].map((_, i) => (
-                <Grid item xs={12} sm={6} md={4} key={i}>
-                  <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', width: '90vw' }}>
-                    <CardContent sx={{ p: 2 }}>
-                      <Box sx={{ mb: 2 }}>
-                        <Skeleton variant="text" sx={{ fontSize: '1rem', mb: 0.5 }} />
-                        <Skeleton variant="text" sx={{ fontSize: '1rem', mb: 0.5 }} />
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                        <Skeleton variant="rounded" width={60} height={24} sx={{ borderRadius: 1.5 }} />
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Skeleton variant="circular" width={32} height={32} />
-                        <Skeleton variant="rounded" width={80} height={32} sx={{ borderRadius: 2 }} />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-        </Box>
-      </ProtectedRoute>
-    );
-  }
+  if (!isClient) return null;
 
   return (
     <ProtectedRoute>
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Container maxWidth="xl" sx={{ py: 3, px: { xs: 2, md: 3 } }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
 
-          {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" fontWeight={600}>Questions</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton onClick={() => setFilterDrawerOpen(true)} size="small">
-                <FilterList />
-              </IconButton>
-              <IconButton
-                onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                size="small"
-              >
-                {viewMode === 'list' ? <ViewModule /> : <ViewList />}
-              </IconButton>
-            </Box>
+        <StickyFilterBar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedSubCategory={selectedSubCategory}
+          setSelectedSubCategory={setSelectedSubCategory}
+        />
+
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+
+          {/* Header Section */}
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Typography variant="h3" fontWeight={800} sx={{
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 1
+            }}>
+              Question Bank
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Review and master your technical interview questions
+            </Typography>
           </Box>
 
-          {/* Search Bar */}
-          <Box sx={{ mb: 3 }}>
+          {/* Top Control Bar */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.5,
+              mb: 4,
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              bgcolor: alpha(theme.palette.background.paper, 0.8),
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: 2,
+              alignItems: 'center'
+            }}
+          >
             <TextField
               fullWidth
-              placeholder="Search questions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by keywords..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search fontSize="small" />
+                    <Search sx={{ color: 'text.disabled' }} />
                   </InputAdornment>
                 ),
-                sx: { borderRadius: 2, fontSize: '0.875rem' }
+                sx: { borderRadius: 2, bgcolor: 'background.paper' }
               }}
+              sx={{ flex: 2 }}
             />
-          </Box>
 
-          {/* Active Filters */}
-          {(selectedCategory !== 'All' || selectedDifficulty !== 'All' || searchTerm) && (
-            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-              {selectedCategory !== 'All' && (
-                <Chip
-                  label={`Cat: ${selectedCategory}`}
-                  onDelete={() => setSelectedCategory('All')}
-                  size="small"
-                  deleteIcon={<Close fontSize="small" />}
-                />
-              )}
-              {selectedDifficulty !== 'All' && (
-                <Chip
-                  label={`Diff: ${selectedDifficulty}`}
-                  onDelete={() => setSelectedDifficulty('All')}
-                  size="small"
-                  deleteIcon={<Close fontSize="small" />}
-                />
-              )}
-              {searchTerm && (
-                <Chip
-                  label={`Search: "${searchTerm.substring(0, 12)}${searchTerm.length > 12 ? '...' : ''}"`}
-                  onDelete={() => setSearchTerm('')}
-                  size="small"
-                  deleteIcon={<Close fontSize="small" />}
-                />
-              )}
-              <Button size="small" onClick={clearFilters}>
-                Clear All
-              </Button>
-            </Box>
-          )}
+            <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' }, flex: 3 }}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={selectedCategory}
+                  onChange={(e) => {
+                    setSelectedCategory(e.target.value);
+                    setSelectedSubCategory("");
+                  }}
+                  sx={{ borderRadius: 2, bgcolor: 'background.paper' }}
+                >
+                  {categories.map(cat => (
+                    <MenuItem key={cat.id} value={cat.label}>{cat.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          {/* Results Count */}
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {filteredQuestions.length} of {questions.length} questions
-          </Typography>
+              <FormControl fullWidth size="small" disabled={!selectedCategory}>
+                <Select
+                  displayEmpty
+                  value={selectedSubCategory}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  sx={{ borderRadius: 2, bgcolor: 'background.paper' }}
+                >
+                  <MenuItem value="">All Topics</MenuItem>
+                  {categories.find(c => c.label === selectedCategory)?.subCategories?.map((sub, i) => (
+                    <MenuItem key={i} value={sub}>{sub}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
 
-          {/* Questions Grid */}
-          {filteredQuestions.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No questions found
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Try adjusting your search or filters
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<Add />}
-                onClick={() => router.push('/add-question')}
-                size="small"
-              >
-                Add Question
-              </Button>
-            </Paper>
-          ) : viewMode === 'grid' ? (
-            <Grid container spacing={2}>
-              {filteredQuestions.map((question) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={question.id}>
+            <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
+            <Stack direction="row" spacing={1}>
+              <Tooltip title="View Mode">
+                <IconButton onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}>
+                  {viewMode === 'list' ? <ViewModule /> : <ViewList />}
+                </IconButton>
+              </Tooltip>
+              <IconButton onClick={() => setFilterOpen(true)}>
+                <FilterList />
+              </IconButton>
+              {hasFilters && (
+                <IconButton onClick={clearFilters} color="primary">
+                  <RestartAlt />
+                </IconButton>
+              )}
+            </Stack>
+          </Paper>
+
+          {/* Content Area */}
+          <Box sx={{ position: 'relative' }}>
+            {loading && questions.length === 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10 }}>
+                <CircularProgress size={40} thickness={4} />
+                <Typography sx={{ mt: 2 }} color="text.secondary">Fetching questions...</Typography>
+              </Box>
+            ) : questions.length === 0 ? (
+              <Paper sx={{ p: 8, textAlign: 'center', borderRadius: 4, border: `2px dashed ${theme.palette.divider}`, bgcolor: 'transparent' }}>
+                <Typography variant="h6" color="text.secondary">No matching questions</Typography>
+                <Button startIcon={<Add />} onClick={() => router.push('/add-question')} sx={{ mt: 2 }}>
+                  Create New Question
+                </Button>
+              </Paper>
+            ) : (
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: viewMode === 'grid' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr',
+                gap: 2
+              }}>
+                {questions.map((question) => (
                   <QuestionCard
+                    key={question.id}
                     question={question}
                     expandedId={expandedId}
                     setExpandedId={setExpandedId}
                     isBookmarked={bookmarked.includes(question.id)}
                     toggleBookmark={toggleBookmark}
-                    onAction={handleQuestionAction}
-                    isMobile={isMobile}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Stack spacing={1.5}>
-              {filteredQuestions.map((question) => (
-                <QuestionCard
-                  key={question.id}
-                  question={question}
-                  expandedId={expandedId}
-                  setExpandedId={setExpandedId}
-                  isBookmarked={bookmarked.includes(question.id)}
-                  toggleBookmark={toggleBookmark}
-                  onAction={handleQuestionAction}
-                  isMobile={isMobile}
-                />
-              ))}
-            </Stack>
-          )}
-        </Container>
-
-        {/* Filter Drawer */}
-        <Drawer
-          anchor="right"
-          open={filterDrawerOpen}
-          onClose={() => setFilterDrawerOpen(false)}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: 320 },
-              p: 2,
-              borderTopLeftRadius: { xs: 0, sm: 8 },
-              borderBottomLeftRadius: { xs: 0, sm: 8 }
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Filters</Typography>
-            <IconButton onClick={() => setFilterDrawerOpen(false)} size="small">
-              <Close />
-            </IconButton>
-          </Box>
-
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Category
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {CATEGORIES.slice(0, 6).map((category) => (
-                  <Chip
-                    key={category.label}
-                    label={category.label}
-                    onClick={() => setSelectedCategory(category.label)}
-                    size="small"
-                    sx={{
-                      mb: 0.5,
-                      bgcolor: selectedCategory === category.label
-                        ? alpha(category.color || theme.palette.primary.main, 0.1) : undefined,
-                      border: `1px solid ${selectedCategory === category.label
-                        ? category.color || theme.palette.primary.main
-                        : theme.palette.divider}`,
-                    }}
                   />
                 ))}
               </Box>
-            </Box>
+            )}
+          </Box>
+        </Container>
 
+        {/* Action Elements */}
+        <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)} PaperProps={{ sx: { width: { xs: '100%', sm: 350 }, p: 3 } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" fontWeight={700}>Preferences</Typography>
+            <IconButton onClick={() => setFilterOpen(false)}><Close /></IconButton>
+          </Box>
+
+          <Stack spacing={3}>
             <Box>
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Difficulty
-              </Typography>
-              <Stack spacing={0.5}>
-                {DIFFICULTIES.map((diff) => (
-                  <Button
-                    key={diff.label}
-                    fullWidth
-                    variant={selectedDifficulty === diff.label ? "contained" : "outlined"}
-                    onClick={() => setSelectedDifficulty(diff.label)}
-                    size="small"
-                    sx={{ justifyContent: 'space-between', borderRadius: 1 }}
-                  >
-                    {diff.label}
-                    {diff.count > 0 && (
-                      <Typography variant="caption">
-                        {diff.count}
-                      </Typography>
-                    )}
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>Sort By</Typography>
+              <FormControl fullWidth size="small">
+                <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ borderRadius: 1 }}>
+                  <MenuItem value="newest">Newest First</MenuItem>
+                  <MenuItem value="oldest">Oldest First</MenuItem>
+                  <MenuItem value="easy-first">Easy First</MenuItem>
+                  <MenuItem value="hard-first">Hard First</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>Difficulty</Typography>
+              <Stack spacing={1}>
+                {['All', 'Easy', 'Medium', 'Hard'].map((difficulty) => (
+                  <Button key={difficulty} fullWidth variant="outlined" sx={{ justifyContent: 'flex-start', borderRadius: 1, textTransform: 'none' }}>
+                    {difficulty}
                   </Button>
                 ))}
               </Stack>
             </Box>
-
-            <Box>
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Sort By
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  sx={{ borderRadius: 1 }}
-                >
-                  {SORT_OPTIONS.map(option => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => setFilterDrawerOpen(false)}
-              sx={{ mt: 1 }}
-            >
-              Apply Filters
-            </Button>
           </Stack>
         </Drawer>
 
-        {/* Add Button */}
-        <Fab
-          color="primary"
-          onClick={() => router.push('/add-question')}
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            zIndex: 1000,
-          }}
-          size="medium"
-        >
+        <Fab color="primary" onClick={() => router.push('/add-question')} sx={{ position: 'fixed', bottom: 32, right: 32 }}>
           <Add />
         </Fab>
       </Box>
     </ProtectedRoute>
   );
 }
+
 
 function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggleBookmark, onAction, isMobile }) {
   const theme = useTheme();
@@ -522,11 +386,110 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
   );
 }
 
+function StickyFilterBar({
+  categories,
+  selectedCategory,
+  setSelectedCategory,
+  selectedSubCategory,
+  setSelectedSubCategory
+}) {
+  const theme = useTheme();
+
+  const trigger = useScrollTrigger({
+    disableHysteresis: true,
+    threshold: 200,
+  });
+
+  const activeSubCategories = categories.find(c => c.label === selectedCategory)?.subCategories || [];
+
+  return (
+    <Slide appear={false} direction="down" in={trigger}>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          top: { xs: 56, sm: 64 }, // Matches your main Navbar height
+          zIndex: 1099, // Just below main Navbar
+          bgcolor: alpha(theme.palette.background.paper, 0.9),
+          backdropFilter: 'blur(10px)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 2 }}>
+
+          {/* Category Dropdown */}
+          <FormControl variant="standard" size="small" sx={{ minWidth: 100, maxWidth: 200 }}>
+            <Select
+              disableUnderline
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setSelectedSubCategory(""); // Reset sub when cat changes
+                window.scrollTo({ top: 0, behavior: 'smooth' }); // Optional: scroll up on change
+              }}
+              displayEmpty
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" fontWeight={600} color="primary">
+                    {selected || "All Categories"}
+                  </Typography>
+                </Box>
+              )}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+            >
+              {categories.map((cat) => (
+                <MenuItem key={cat.id} value={cat.label}>{cat.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Typography color="text.secondary">/</Typography>
+
+          {/* Sub-Category Dropdown */}
+          <FormControl variant="standard" size="small" sx={{ minWidth: 120, maxWidth: 200 }} disabled={!selectedCategory}>
+            <Select
+              disableUnderline
+              value={selectedSubCategory}
+              onChange={(e) => {
+                setSelectedSubCategory(e.target.value);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              displayEmpty
+              renderValue={(selected) => (
+                <Typography variant="body2" fontWeight={600}>
+                  {selected || "All Topics"}
+                </Typography>
+              )}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+            >
+              <MenuItem value="">All Topics</MenuItem>
+              {activeSubCategories.map((sub, index) => (
+                <MenuItem key={index} value={sub}>{sub}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* "Back to Top" shortcut on the far right */}
+          <Box sx={{ flexGrow: 1 }} />
+          <Button
+            size="small"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            sx={{ minWidth: 'auto', color: 'text.secondary' }}
+          >
+            Top
+          </Button>
+
+        </Toolbar>
+      </AppBar>
+    </Slide>
+  );
+}
+
 function getDifficultyColor(difficulty) {
-  switch (difficulty) {
-    case 'Easy': return '#4CAF50';
-    case 'Medium': return '#FF9800';
-    case 'Hard': return '#F44336';
-    default: return '#666';
-  }
+  const colors = {
+    'Easy': '#10B981',
+    'Medium': '#F59E0B',
+    'Hard': '#EF4444'
+  };
+  return colors[difficulty] || '#6B7280';
 }
