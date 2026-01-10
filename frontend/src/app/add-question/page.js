@@ -4,46 +4,22 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Container, Paper, Typography, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, Alert,
-  CircularProgress, Stack, Divider, Chip, alpha, Card, Fade, Zoom, Avatar, InputAdornment, Grid, Accordion, AccordionSummary, AccordionDetails, Tabs, Tab
+  CircularProgress, Stack, Chip, alpha, Card, Grid, Tabs, Tab
 } from "@mui/material";
 import {
-  Save, ArrowBack, AddCircle, CheckCircle, Category, AutoFixHigh, LocalOffer, Timer,
-  BarChart, Help, ExpandMore, Visibility, Preview, Edit, ContentCopy, QuestionAnswer
+  Save, ArrowBack, AddCircle, CheckCircle, Category,
+  Help, Visibility, Edit, QuestionAnswer
 } from "@mui/icons-material";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { questionsAPI } from "@/lib/api";
+import { questionsAPI, categoryAPI } from "@/lib/api";
 import { useTheme, useMediaQuery } from "@mui/material";
 import ReactQuillEditor from "@/components/editor/ReactQuillEditor";
 import ReactQuillViewer from "@/components/editor/ReactQuillViewer";
 
 import DOMPurify from "dompurify";
 
-const CATEGORIES = [
-  { label: 'All', icon: 'ðŸ“š', count: 0 },
-  { label: 'Core Java', icon: 'â˜•', count: 45, color: '#FF6B6B' },
-  { label: 'Collections', icon: 'ðŸ“¦', count: 32, color: '#4ECDC4' },
-  { label: 'Multithreading', icon: 'âš¡', count: 28, color: '#45B7D1' },
-  { label: 'Spring Boot', icon: 'ðŸƒ', count: 38, color: '#96CEB4' },
-  { label: 'Microservices', icon: 'ðŸ”§', count: 42, color: '#FFEAA7' },
-  { label: 'Database & JPA', icon: 'ðŸ—„ï¸', count: 35, color: '#DDA0DD' },
-  { label: 'Algorithms', icon: 'ðŸ’¡', count: 52, color: '#FFA726' }
-];
-
-const DIFFICULTIES = [
-  { label: 'All', count: 0 },
-  { label: 'Easy', count: 85, color: '#4CAF50' },
-  { label: 'Medium', count: 145, color: '#FF9800' },
-  { label: 'Hard', count: 70, color: '#F44336' }
-];
-
-const SORT_OPTIONS = [
-  { label: 'Newest First', value: 'newest' },
-  { label: 'Oldest First', value: 'oldest' },
-  { label: 'Difficulty: Easy to Hard', value: 'easy-first' },
-  { label: 'Difficulty: Hard to Easy', value: 'hard-first' },
-  { label: 'Most Viewed', value: 'popular' }
-];
+const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 
 export default function AddQuestionPage() {
   const theme = useTheme();
@@ -55,25 +31,18 @@ export default function AddQuestionPage() {
   const [success, setSuccess] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [wordCount, setWordCount] = useState(0);
-  const [charCount, setCharCount] = useState(0);
-
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
-    category: "Core Java",
+    category: "",
+    subCategory: "",
     difficulty: "Medium",
     question: "",
-    answer: "<p>Start writing your answer here...</p>",
+    answer: "",
     tags: "",
-    explanation: "",
-    complexity: "",
-    followUp: "",
-    resources: "",
-    estimatedTime: "15"
   });
 
-  // helper: sanitize & strip tags to get plain text for counts/validation/search
   const htmlToPlain = (html = "") => {
     const clean = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
-    // collapse whitespace and decode basic entities if necessary
     return clean.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   };
 
@@ -82,13 +51,20 @@ export default function AddQuestionPage() {
     const plainQuestion = formData.question.trim();
     const totalPlain = `${plainQuestion} ${plainAnswer}`.trim();
     const totalWords = totalPlain ? totalPlain.split(/\s+/).filter(Boolean).length : 0;
-    const totalChars = totalPlain.length;
     setWordCount(totalWords);
-    setCharCount(totalChars);
   }, [formData.question, formData.answer]);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === "category") {
+      const selectedCategory = categories.find(cat => cat.label === value);
+      setFormData(prev => ({
+        ...prev,
+        category: value,
+        subCategory: selectedCategory?.subCategories?.[0] || "",
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -109,28 +85,25 @@ export default function AddQuestionPage() {
 
     setLoading(true);
     try {
-      // Server should still sanitize / validate. We send HTML, but server must enforce rules.
       const payload = {
         ...formData,
-        // also store a plain text copy for search/indexing on the server
         plainText: `${formData.question} ${plainAnswer}`.trim()
       };
 
-      const res = await questionsAPI.create(payload);
+      await questionsAPI.create(payload);
       setSuccess(true);
 
-      // short redirect — keep it simple
       setTimeout(() => router.push("/questions"), 1200);
     } catch (err) {
       console.error("Error adding question:", err);
-      setError(err?.message || "Failed to add question. Please try again.");
+      setError(err?.message || "Failed to add question");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    if (formData.question || (htmlToPlain(formData.answer))) {
+    if (formData.question || htmlToPlain(formData.answer)) {
       if (window.confirm("Are you sure? Your changes will be lost.")) {
         router.push("/questions");
       }
@@ -139,116 +112,109 @@ export default function AddQuestionPage() {
     }
   };
 
-  const getCategoryColor = () => {
-    const category = CATEGORIES.find(c => c.value === formData.category);
-    return category ? category.color : theme.palette.primary.main;
-  };
+  const _getCatergories = async () => {
+    try {
+      let res = await categoryAPI.getAll();
+      setCategories(res.data);
+    } catch (error) {
+      console.log(error, "Error while fetching categories");
+      setCategories([]);
+    }
+  }
 
-  const getDifficultyColor = () => {
-    const difficulty = DIFFICULTIES.find(d => d.value === formData.difficulty);
-    return difficulty ? difficulty.color : theme.palette.primary.main;
-  };
+  useEffect(() => {
+    if (Array.isArray(categories) && categories.length > 0) {
+      const firstCategory = categories[0];
+      setFormData(prev => ({
+        ...prev,
+        category: firstCategory.label,
+        subCategory: firstCategory.subCategories?.[0] || "",
+      }));
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    _getCatergories();
+  }, []);
 
   const renderPreview = () => (
-    <Fade in={previewMode} timeout={300}>
-      <Box>
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: `2px solid ${alpha(theme.palette.divider, 0.2)}`, bgcolor: theme.palette.background.default, mb: 3 }}>
-          {/* header */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-            <QuestionAnswer sx={{ color: theme.palette.primary.main, fontSize: "2rem" }} />
-            <Box>
-              <Typography variant="h6" fontWeight={700} color="primary">Question Preview</Typography>
-              <Typography variant="caption" color="text.secondary">How it will appear to users</Typography>
-            </Box>
-          </Box>
+    <Box>
+      <Paper sx={{ p: 3, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, mb: 3 }}>
+        <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>Preview</Typography>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Card elevation={0} sx={{ p: 3, borderRadius: 3, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, bgcolor: alpha(theme.palette.primary.main, 0.03) }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Help sx={{ color: theme.palette.primary.main }} /> Question
-                </Typography>
-                <Typography variant="body1" sx={{ fontSize: "1.1rem", lineHeight: 1.6 }}>
-                  {formData.question || "No question entered"}
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Card elevation={0} sx={{ p: 3, borderRadius: 3, border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`, bgcolor: alpha(theme.palette.success.main, 0.03) }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <CheckCircle sx={{ color: theme.palette.success.main }} /> Answer
-                </Typography>
-
-                {/* Use the viewer to render sanitized HTML (keeps formatting & code blocks) */}
-                <Box sx={{ mt: 1 }}>
-                  <ReactQuillViewer value={formData.answer} />
-                </Box>
-              </Card>
-            </Grid>
-
-            {/* Category / Difficulty cards omitted for brevity — use your existing markup */}
-            <Grid item xs={12} md={6}>
-              <Card elevation={0} sx={{ p: 2, borderRadius: 3 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Avatar sx={{ bgcolor: alpha(getCategoryColor(), 0.1), color: getCategoryColor(), width: 48, height: 48 }}>
-                    {CATEGORIES.find(c => c.value === formData.category)?.icon}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Category</Typography>
-                    <Typography fontWeight={600}>{formData.category}</Typography>
-                  </Box>
-                </Box>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Card elevation={0} sx={{ p: 2, borderRadius: 3 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: alpha(getDifficultyColor(), 0.1), display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Typography variant="h5" sx={{ color: getDifficultyColor() }}>{DIFFICULTIES.find(d => d.value === formData.difficulty)?.icon}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Difficulty</Typography>
-                    <Typography fontWeight={600}>{formData.difficulty}</Typography>
-                  </Box>
-                </Box>
-              </Card>
-            </Grid>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Card sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+              <Typography variant="body1" fontWeight={500}>
+                {formData.question || "No question entered"}
+              </Typography>
+            </Card>
           </Grid>
-        </Paper>
-      </Box>
-    </Fade>
+
+          <Grid item xs={12}>
+            <Card sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.05) }}>
+              <Box sx={{ mt: 1 }}>
+                <ReactQuillViewer value={formData.answer} />
+              </Box>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Category sx={{ fontSize: '1rem', color: theme.palette.primary.main }} />
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Category</Typography>
+                <Typography variant="body2" fontWeight={500}>{formData.category}</Typography>
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: alpha(theme.palette.info.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography sx={{ color: theme.palette.info.main, fontWeight: 600 }}>D</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Difficulty</Typography>
+                <Typography variant="body2" fontWeight={500}>{formData.difficulty}</Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+    </Box>
   );
 
   return (
     <ProtectedRoute>
-      <Box sx={{ minHeight: "100vh", background: `linear-gradient(135deg, ${alpha(theme.palette.background.default, 1)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`, py: { xs: 2, sm: 3, md: 4 } }}>
-        <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-          {/* Header & Tabs (kept same as your original) */}
-          <Box sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
-            <Button startIcon={<ArrowBack />} onClick={handleCancel} sx={{ mb: 3, borderRadius: 3, textTransform: "none", fontWeight: 600, color: "text.secondary" }}>
-              Back to Questions
+      <Box sx={{ minHeight: "100vh", bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2 } }}>
+          {/* Header */}
+          <Box sx={{ mb: 3 }}>
+            <Button startIcon={<ArrowBack />} onClick={handleCancel} sx={{ mb: 2, textTransform: "none" }}>
+              Back
             </Button>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 4 }}>
-              <Box sx={{ width: { xs: 60, sm: 80 }, height: { xs: 60, sm: 80 }, borderRadius: 3, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}` }}>
-                <AddCircle sx={{ color: "white", fontSize: { xs: "2rem", sm: "3rem" } }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: theme.palette.primary.main, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AddCircle sx={{ color: "white", fontSize: "1.5rem" }} />
               </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h1" sx={{ fontSize: { xs: "1.75rem", sm: "2.5rem", md: "3rem" }, fontWeight: 800, background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", mb: 1 }}>
-                  Create Interview Question
+              <Box>
+                <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
+                  Add Question
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                  Write both question and answer in one unified interface
+                <Typography variant="body2" color="text.secondary">
+                  Create a new interview question
                 </Typography>
               </Box>
             </Box>
 
-            <Paper elevation={0} sx={{ mb: 4, borderRadius: 3, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, background: theme.palette.background.paper }}>
-              <Tabs value={previewMode ? 1 : 0} onChange={(e, newValue) => setPreviewMode(newValue === 1)} sx={{ '& .MuiTab-root': { textTransform: "none", fontWeight: 600, fontSize: "0.95rem", py: 2 } }}>
-                <Tab label={<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><Edit /> Edit Mode</Box>} />
-                <Tab label={<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><Preview /> Live Preview</Box>} />
+            <Paper sx={{ mb: 3, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+              <Tabs value={previewMode ? 1 : 0} onChange={(e, newValue) => setPreviewMode(newValue === 1)}>
+                <Tab label="Edit" />
+                <Tab label="Preview" />
               </Tabs>
             </Paper>
           </Box>
@@ -256,117 +222,158 @@ export default function AddQuestionPage() {
           {previewMode ? (
             renderPreview()
           ) : (
-            <Box sx={{ display: "flex", gap: { xs: 0, md: 4 }, flexDirection: { xs: "column", md: "row" } }}>
-              {/* Main form */}
-              <Box sx={{ flex: 1 }}>
-                <Fade in={!previewMode} timeout={500}>
-                  <Paper elevation={0} sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: 4, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, background: theme.palette.background.paper, boxShadow: "0 8px 32px rgba(0,0,0,0.04)", position: "relative" }}>
-                    {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }} onClose={() => setError("")}>{error}</Alert>}
-                    {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 3 }}> <Typography fontWeight={600}>🎉 Question added successfully!</Typography><Typography variant="body2">Redirecting to questions page...</Typography></Alert>}
+            <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+              {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }} onClose={() => setError("")}>{error}</Alert>}
+              {success && <Alert severity="success" sx={{ mb: 2, borderRadius: 1 }}>Question added successfully!</Alert>}
 
-                    <Box component="form" onSubmit={handleSubmit}>
-                      <Stack spacing={4}>
-                        {/* Basic info, question input (same as your original) */}
-                        <Box>
-                          <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}>
-                            <Category sx={{ color: theme.palette.primary.main }} /> Basic Information
-                          </Typography>
+              <Box component="form" onSubmit={handleSubmit}>
+                <Stack spacing={3}>
+                  {/* Basic Info */}
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                      Basic Information
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Category</InputLabel>
+                          <Select
+                            value={formData.category}
+                            label="Category"
+                            onChange={(e) => handleChange("category", e.target.value)}
+                          >
+                            {Array.isArray(categories) && categories.length > 0
+                              ? categories.map(cat => (
+                                <MenuItem key={cat.id} value={cat.label}>
+                                  {cat.label}
+                                </MenuItem>
+                              ))
+                              : null}
+                          </Select>
+                        </FormControl>
+                      </Grid>
 
-                          <Grid container spacing={3} sx={{ mb: 4 }}>
-                            <Grid item xs={12} sm={6}>
-                              <FormControl fullWidth required>
-                                <InputLabel>Category</InputLabel>
-                                <Select value={formData.category} label="Category" onChange={(e) => handleChange("category", e.target.label)} sx={{ borderRadius: 3 }}>
-                                  {CATEGORIES.map(cat => <MenuItem key={cat.label} value={cat.label}>{cat.label}</MenuItem>)}
-                                </Select>
-                              </FormControl>
-                            </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Sub-Category</InputLabel>
+                          <Select
+                            value={formData.subCategory}
+                            label="Sub-Category"
+                            onChange={(e) => handleChange("subCategory", e.target.value)}
+                          >
+                            {categories?.find(c => c.label === formData.category)?.subCategories
+                              .map((sub, i) => (
+                                <MenuItem key={i} value={sub}>{sub}</MenuItem>
+                              ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
 
-                            <Grid item xs={12} sm={6}>
-                              <FormControl fullWidth required>
-                                <InputLabel>Difficulty</InputLabel>
-                                <Select value={formData.difficulty} label="Difficulty" onChange={(e) => handleChange("difficulty", e.target.label)} sx={{ borderRadius: 3 }}>
-                                  {DIFFICULTIES.map(diff => <MenuItem key={diff.label} value={diff.label}>{diff.label}</MenuItem>)}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-                          </Grid>
-                        </Box>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Difficulty</InputLabel>
+                          <Select value={formData.difficulty} label="Difficulty" onChange={(e) => handleChange("difficulty", e.target.value)}>
+                            {DIFFICULTIES.map(diff => <MenuItem key={diff} value={diff}>{diff}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  </Box>
 
-                        {/* Question section */}
-                        <Box>
-                          <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}>
-                            <Help sx={{ color: theme.palette.primary.main }} /> Question
-                          </Typography>
-                          <TextField fullWidth required multiline rows={3} value={formData.question} onChange={(e) => handleChange("question", e.target.value)} placeholder="Enter a clear and specific interview question..." sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, fontSize: "1.1rem" } }} InputProps={{ startAdornment: <InputAdornment position="start"><QuestionAnswer sx={{ color: theme.palette.text.secondary }} /></InputAdornment> }} helperText="Be specific and include context when needed" />
-                          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-                            <Typography variant="caption" color="text.secondary">{formData.question.length}/500 characters</Typography>
-                            <Typography variant="caption" color={formData.question.length > 400 ? "warning.main" : "text.secondary"}>{Math.ceil(formData.question.split(" ").length / 200 * 100)}% complete</Typography>
-                          </Box>
-                        </Box>
+                  {/* Question */}
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                      Question
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      value={formData.question}
+                      onChange={(e) => handleChange("question", e.target.value)}
+                      placeholder="Enter your question here..."
+                      size="small"
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {formData.question.length}/500 characters
+                    </Typography>
+                  </Box>
 
-                        {/* Answer Section (editor) */}
-                        <Box>
-                          <Box sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 3, overflow: "hidden", mb: 2 }}>
-                            <ReactQuillEditor value={formData.answer} onChange={(value) => handleChange("answer", value)} />
-                            <Box sx={{ p: 2 }}>
-                              <Button variant="text" onClick={() => console.log(formData.answer)}>Log HTML</Button>
-                              <Button variant="text" onClick={() => console.log(htmlToPlain(formData.answer))}>Log Plain</Button>
-                            </Box>
-                          </Box>
-
-                          <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.05), border: `1px solid ${alpha(theme.palette.success.main, 0.1)}` }}>
-                            <Typography variant="caption" color="text.secondary">💡 Tip: Include code examples, diagrams, and real-world scenarios for better understanding.</Typography>
-                          </Box>
-                        </Box>
-
-                        {/* Additional fields & action buttons (kept similar to yours) */}
-                        <Accordion elevation={0} sx={{ borderRadius: 3, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, '&:before': { display: "none" } }}>
-                          <AccordionSummary expandIcon={<ExpandMore />}>
-                            <Typography variant="subtitle1" fontWeight={600} sx={{ display: "flex", alignItems: "center", gap: 1 }}><LocalOffer sx={{ color: theme.palette.warning.main }} /> Additional Information (Optional)</Typography>
-                          </AccordionSummary>
-                          <AccordionDetails>
-                            <Stack spacing={3}>
-                              <Box>
-                                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Tags</Typography>
-                                <TextField fullWidth value={formData.tags} onChange={(e) => handleChange("tags", e.target.value)} placeholder="collections, threading, design-patterns" InputProps={{ startAdornment: <InputAdornment position="start"><LocalOffer sx={{ color: theme.palette.text.secondary }} /></InputAdornment>, sx: { borderRadius: 3 } }} />
-                                {formData.tags && <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>{formData.tags.split(",").filter(t => t.trim()).map((tag, i) => (<Chip key={i} label={tag.trim()} size="small" onDelete={() => {
-                                  const tags = formData.tags.split(",").filter(t => t.trim() !== tag.trim());
-                                  handleChange("tags", tags.join(","));
-                                }} sx={{ borderRadius: 2 }} />))}</Box>}
-                              </Box>
-
-                              <Box>
-                                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Explanation & Context</Typography>
-                                <TextField fullWidth multiline rows={3} value={formData.explanation} onChange={(e) => handleChange("explanation", e.target.value)} placeholder="Add background context, common mistakes, or alternative approaches..." sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }} />
-                              </Box>
-
-                              <Box>
-                                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Complexity Analysis</Typography>
-                                <TextField fullWidth multiline rows={2} value={formData.complexity} onChange={(e) => handleChange("complexity", e.target.value)} placeholder="Time complexity: O(n), Space complexity: O(1)..." sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }} />
-                              </Box>
-                            </Stack>
-                          </AccordionDetails>
-                        </Accordion>
-
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4, pt: 4, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                          <Box sx={{ display: "flex", gap: 2 }}>
-                            <Button variant="outlined" onClick={handleCancel} disabled={loading} sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}>Cancel</Button>
-                            <Button variant="outlined" onClick={() => setPreviewMode(true)} startIcon={<Visibility />} sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}>Preview</Button>
-                          </Box>
-
-                          <Box sx={{ display: "flex", gap: 2 }}>
-                            <Button type="submit" variant="contained" disabled={loading} startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Save />} sx={{ borderRadius: 3, px: 4, py: 1.5, textTransform: "none", fontWeight: 600 }}>
-                              {loading ? "Adding Question..." : "Save Question"}
-                            </Button>
-                          </Box>
-                        </Box>
-                      </Stack>
+                  {/* Answer */}
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                      Answer
+                    </Typography>
+                    <Box sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 1 }}>
+                      <ReactQuillEditor value={formData.answer} onChange={(value) => handleChange("answer", value)} />
                     </Box>
-                  </Paper>
-                </Fade>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                      {wordCount} words • Include code examples for clarity
+                    </Typography>
+                  </Box>
+
+                  {/* Tags */}
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                      Tags (Optional)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      value={formData.tags}
+                      onChange={(e) => handleChange("tags", e.target.value)}
+                      placeholder="collections, threading, design-patterns"
+                      size="small"
+                    />
+                    {formData.tags && (
+                      <Box sx={{ mt: 1, display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                        {formData.tags.split(",").filter(t => t.trim()).map((tag, i) => (
+                          <Chip
+                            key={i}
+                            label={tag.trim()}
+                            size="small"
+                            onDelete={() => {
+                              const tags = formData.tags.split(",").filter(t => t.trim() !== tag.trim());
+                              handleChange("tags", tags.join(","));
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Actions */}
+                  <Box sx={{ display: 'flex', gap: 2, pt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancel}
+                      disabled={loading}
+                      sx={{ flex: 1 }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      onClick={() => setPreviewMode(true)}
+                      startIcon={<Visibility />}
+                      sx={{ flex: 1 }}
+                    >
+                      Preview
+                    </Button>
+
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={loading}
+                      startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                      sx={{ flex: 1 }}
+                    >
+                      {loading ? "Saving..." : "Save"}
+                    </Button>
+                  </Box>
+                </Stack>
               </Box>
-            </Box>
+            </Paper>
           )}
         </Container>
       </Box>
