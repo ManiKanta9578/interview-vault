@@ -46,6 +46,13 @@ public class QuestionController {
         return ResponseEntity.ok(questionService.getQuestionsByCategoryAndUser(category, username));
     }
 
+    @GetMapping("/sub-category/{subCategory}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Question>> getBySubCategory(@PathVariable String subCategory) {
+        String username = getCurrentUsername();
+        return ResponseEntity.ok(questionService.getQuestionsBySubcategoryAndUser(subCategory, username));
+    }
+
     // Search user's questions
     @GetMapping("/search")
     @PreAuthorize("isAuthenticated()")

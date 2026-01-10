@@ -31,6 +31,11 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    public List<Question> getQuestionsBySubcategoryAndUser(String subCategory, String username){
+        return questionRepository.findBySubCategoryAndCreatedBy(subCategory, username);
+    }
+
+    @Override
     public List<Question> searchQuestionsByUser(String keyword, String username) {
         return questionRepository.searchByKeywordAndUser(keyword, username);
     }

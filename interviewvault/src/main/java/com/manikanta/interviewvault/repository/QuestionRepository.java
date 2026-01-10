@@ -20,6 +20,8 @@ public interface QuestionRepository extends MongoRepository<Question, String> {
     // Find by category and user
     List<Question> findByCategoryAndCreatedBy(String category, String createdBy);
 
+    List<Question> findBySubCategoryAndCreatedBy(String subCategory, String createdBy);
+
     // Find by difficulty and user
     List<Question> findByDifficultyAndCreatedBy(String difficulty, String createdBy);
 
