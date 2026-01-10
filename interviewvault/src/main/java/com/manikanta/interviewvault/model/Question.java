@@ -21,6 +21,9 @@ public class Question {
     private String category;
 
     @Indexed
+    private String subCategory;
+
+    @Indexed
     private String difficulty;
 
     private String question;
