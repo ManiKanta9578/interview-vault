@@ -1,227 +1,135 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import DOMPurify from "dompurify";
-import { Box, useTheme, alpha } from "@mui/material";
-import hljs from "highlight.js";
+import React, { useMemo } from 'react';
+import { Box, useTheme, alpha, IconButton, Tooltip } from '@mui/material';
+import { ContentCopy, Check } from '@mui/icons-material';
+import DOMPurify from 'dompurify';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/atom-one-dark.css'; // Ensure you import a style
 
-// Register minimal languages needed
-hljs.registerLanguage("javascript", require("highlight.js/lib/languages/javascript"));
-hljs.registerLanguage("python", require("highlight.js/lib/languages/python"));
-hljs.registerLanguage("java", require("highlight.js/lib/languages/java"));
-hljs.registerLanguage("sql", require("highlight.js/lib/languages/sql"));
-hljs.registerLanguage("typescript", require("highlight.js/lib/languages/typescript"));
+// Function to repair "p > code" lines into "pre > code" blocks
+const repairCodeBlocks = (html) => {
+  if (typeof window === 'undefined') return html;
 
-export default function ReactQuillViewer({
-  value = "",
-  elevation = 0,
-  showBorder = true,
-  sx = {},
-}) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
-  const contentRef = useRef(null);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  // Find all paragraphs that ONLY contain a code tag
+  const codeLines = Array.from(doc.querySelectorAll('p > code:only-child'));
+  
+  if (codeLines.length === 0) return html;
 
-  useEffect(() => {
-    if (!contentRef.current) return;
-
-    // Process code blocks
-    const containers = contentRef.current.querySelectorAll(".ql-code-block-container");
+  // Iterate and merge consecutive lines
+  for (let i = 0; i < codeLines.length; i++) {
+    const codeTag = codeLines[i];
+    const pTag = codeTag.parentElement;
     
-    containers.forEach((container) => {
-      if (container.dataset.processed) return;
-      container.dataset.processed = "true";
+    // Check if this is the start of a block (prev sibling is not a code-p)
+    const prevP = pTag.previousElementSibling;
+    const isStartOfBlock = !prevP || !prevP.querySelector('code:only-child');
 
-      const lines = container.querySelectorAll(".ql-code-block");
-      let codeText = "";
-      let language = "java";
+    if (isStartOfBlock) {
+      // Collect all consecutive code lines
+      let currentP = pTag;
+      let codeContent = [];
+      let nodesToRemove = [];
 
-      lines.forEach((line, idx) => {
-        const textarea = document.createElement("textarea");
-        textarea.innerHTML = line.innerHTML;
-        const text = textarea.value === "<br>" ? "" : textarea.value;
-        codeText += text + (idx < lines.length - 1 ? "\n" : "");
-        
-        if (line.dataset.language && line.dataset.language !== "plain") {
-          language = line.dataset.language;
-        }
-      });
-
-      // Create code block wrapper
-      const wrapper = document.createElement("div");
-      wrapper.style.cssText = `
-        position: relative;
-        border-radius: 6px;
-        overflow: hidden;
-        margin: 12px 0;
-        background: ${isDark ? "#1e1e1e" : "#f8f9fa"};
-        border: 1px solid ${isDark ? "#2d333b" : "#e1e4e8"};
-      `;
-
-      // Header with language and copy button
-      const header = document.createElement("div");
-      header.style.cssText = `
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        background: ${isDark ? "#161b22" : "#f6f8fa"};
-        border-bottom: 1px solid ${isDark ? "#2d333b" : "#e1e4e8"};
-      `;
-
-      const langLabel = document.createElement("span");
-      langLabel.textContent = language;
-      langLabel.style.cssText = `
-        font-size: 12px;
-        font-weight: 500;
-        color: ${isDark ? "#8b949e" : "#6e7781"};
-        font-family: 'SF Mono', monospace;
-      `;
-
-      // Copy button
-      const copyBtn = document.createElement("button");
-      copyBtn.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-      `;
-      copyBtn.style.cssText = `
-        background: transparent;
-        border: 1px solid ${isDark ? "#2d333b" : "#d0d7de"};
-        border-radius: 4px;
-        padding: 4px 8px;
-        cursor: pointer;
-        color: ${isDark ? "#8b949e" : "#6e7781"};
-        display: flex;
-        align-items: center;
-        transition: all 0.2s;
-      `;
-
-      copyBtn.addEventListener("click", () => {
-        navigator.clipboard.writeText(codeText);
-        copyBtn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-        `;
-        setTimeout(() => {
-          copyBtn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          `;
-        }, 1500);
-      });
-
-      header.appendChild(langLabel);
-      header.appendChild(copyBtn);
-
-      // Code content
-      const pre = document.createElement("pre");
-      pre.style.cssText = `
-        margin: 0;
-        padding: 12px;
-        overflow-x: auto;
-        font-size: 13px;
-        line-height: 1.5;
-        background: transparent !important;
-      `;
-
-      const code = document.createElement("code");
-      code.className = `language-${language}`;
-      code.textContent = codeText;
-      code.style.fontFamily = "'SF Mono', 'Courier New', monospace";
-
-      try {
-        hljs.highlightElement(code);
-      } catch (e) {
-        console.warn("Highlight failed:", language);
+      while (currentP && currentP.querySelector('code:only-child')) {
+        // Extract text, handling encoded entities
+        codeContent.push(currentP.querySelector('code').textContent);
+        nodesToRemove.push(currentP);
+        currentP = currentP.nextElementSibling;
       }
 
-      pre.appendChild(code);
-      wrapper.appendChild(header);
-      wrapper.appendChild(pre);
+      // If we found more than 1 line, or if it's a significant single line
+      if (codeContent.length > 0) {
+        // Create new Pre/Code block
+        const pre = doc.createElement('pre');
+        const code = doc.createElement('code');
+        code.className = 'language-java'; // Default fallback
+        code.textContent = codeContent.join('\n');
+        pre.appendChild(code);
 
-      container.parentNode.replaceChild(wrapper, container);
+        // Replace the first P with the new PRE
+        pTag.parentNode.replaceChild(pre, pTag);
+
+        // Remove the other absorbed P tags
+        nodesToRemove.slice(1).forEach(node => node.remove());
+        
+        // Skip index forward
+        i += nodesToRemove.length - 1;
+      }
+    }
+  }
+
+  return doc.body.innerHTML;
+};
+
+export default function RichTextViewer({ value }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  // 1. Repair HTML structure (p > code -> pre > code)
+  // 2. Sanitize for security
+  const processedHtml = useMemo(() => {
+    const repaired = repairCodeBlocks(value || "");
+    return DOMPurify.sanitize(repaired);
+  }, [value]);
+
+  // 3. Apply Syntax Highlighting after render
+  React.useEffect(() => {
+    document.querySelectorAll('pre code').forEach((block) => {
+      hljs.highlightElement(block);
     });
-  }, [value, isDark]);
-
-  // Sanitize HTML
-  const safeHtml = DOMPurify.sanitize(value, {
-    ALLOWED_TAGS: [
-      "p", "br", "strong", "em", "u", "s", "h1", "h2", "h3", 
-      "h4", "h5", "h6", "ul", "ol", "li", "blockquote", 
-      "pre", "code", "a", "span", "div", "img"
-    ],
-    ALLOWED_ATTR: [
-      "href", "target", "rel", "class", "src", "alt", "style",
-      "data-language", "data-list"
-    ],
-  });
+  }, [processedHtml]);
 
   return (
-    <Box
-      sx={{
-        p: 2,
-        borderRadius: 1.5,
-        border: showBorder ? `1px solid ${alpha(theme.palette.divider, 0.08)}` : 'none',
-        bgcolor: isDark ? 'grey.900' : 'background.paper',
-        fontSize: '0.9rem',
-        lineHeight: 1.6,
-        ...sx,
-      }}
-    >
-      <Box
-        ref={contentRef}
-        dangerouslySetInnerHTML={{ __html: safeHtml }}
-        sx={{
-          color: 'text.primary',
-          
-          // Basic typography
-          "& p": {
-            margin: '0 0 0.75rem 0',
-          },
-          "& h1, & h2, & h3, & h4, & h5, & h6": {
-            margin: '1.5rem 0 0.75rem 0',
-            fontWeight: 600,
-          },
-          "& ul, & ol": {
-            margin: '0 0 0.75rem 1.5rem',
-          },
-          "& li": {
-            marginBottom: '0.25rem',
-          },
-          "& blockquote": {
-            margin: '0.75rem 0',
-            paddingLeft: '1rem',
-            borderLeft: `3px solid ${theme.palette.divider}`,
-            color: 'text.secondary',
-          },
-          "& a": {
-            color: theme.palette.primary.main,
-            textDecoration: 'none',
-            '&:hover': {
-              textDecoration: 'underline',
-            },
-          },
-          
-          // Syntax highlighting
-          "& .hljs": {
-            background: 'transparent',
-          },
-          "& .hljs-keyword": { color: isDark ? '#c678dd' : '#d73a49' },
-          "& .hljs-string": { color: isDark ? '#98c379' : '#032f62' },
-          "& .hljs-number": { color: isDark ? '#d19a66' : '#005cc5' },
-          "& .hljs-comment": { 
-            color: isDark ? '#5c6370' : '#6a737d',
-            fontStyle: 'italic'
-          },
-          "& .hljs-title": { color: isDark ? '#61afef' : '#6f42c1' },
-          "& .hljs-variable": { color: isDark ? '#e06c75' : '#e36209' },
-        }}
-      />
+    <Box sx={{
+      // Global Text Styles
+      fontFamily: theme.typography.fontFamily,
+      fontSize: '0.95rem',
+      lineHeight: 1.6,
+      color: theme.palette.text.primary,
+
+      '& p': { marginBottom: '1em' },
+      
+      // Inline Code (Single words)
+      '& :not(pre) > code': {
+        fontFamily: "'JetBrains Mono', monospace",
+        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+        color: theme.palette.primary.main,
+        padding: '0.2em 0.4em',
+        borderRadius: '4px',
+        fontSize: '0.85em',
+      },
+
+      // Code Blocks (The terminal view)
+      '& pre': {
+        position: 'relative',
+        backgroundColor: isDark ? '#0d1117' : '#f6f8fa',
+        border: `1px solid ${isDark ? '#30363d' : '#e1e4e8'}`,
+        borderRadius: '8px',
+        padding: '16px',
+        overflowX: 'auto',
+        marginBottom: '1.5em',
+        marginTop: '1em',
+        fontFamily: "'JetBrains Mono', monospace",
+        
+        '& code': {
+          backgroundColor: 'transparent',
+          color: 'inherit',
+          padding: 0,
+          fontSize: '0.9em',
+          display: 'block',
+          overflowX: 'auto',
+        },
+      },
+
+      // Lists
+      '& ul, & ol': { paddingLeft: '1.5em', marginBottom: '1em' },
+      '& li': { marginBottom: '0.5em' },
+    }}>
+      <div dangerouslySetInnerHTML={{ __html: processedHtml }} />
     </Box>
   );
 }
