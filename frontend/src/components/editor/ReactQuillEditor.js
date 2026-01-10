@@ -42,7 +42,7 @@ export default function ReactQuillEditor({
 
   const formats = [
     "header", "bold", "italic", "underline",
-    "list", "bullet", "code-block", "link",
+    "list", "code-block", "link",
   ];
 
   return (

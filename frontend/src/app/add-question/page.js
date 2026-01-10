@@ -7,27 +7,17 @@ import {
   CircularProgress, Stack, Chip, alpha, Card, Grid, Tabs, Tab
 } from "@mui/material";
 import {
-  Save, ArrowBack, AddCircle, CheckCircle, Category, 
+  Save, ArrowBack, AddCircle, CheckCircle, Category,
   Help, Visibility, Edit, QuestionAnswer
 } from "@mui/icons-material";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { questionsAPI } from "@/lib/api";
+import { questionsAPI, categoryAPI } from "@/lib/api";
 import { useTheme, useMediaQuery } from "@mui/material";
 import ReactQuillEditor from "@/components/editor/ReactQuillEditor";
 import ReactQuillViewer from "@/components/editor/ReactQuillViewer";
 
 import DOMPurify from "dompurify";
-
-const CATEGORIES = [
-  { label: 'Core Java', subCategories: ["OOP Concepts", "Exception Handling", "Generics"] },
-  { label: 'Collections', subCategories: ["List/ArrayList", "Map/HashMap", "Set/HashSet"] },
-  { label: 'Multithreading', subCategories: ["Thread Lifecycle", "Executor Framework", "Locks"] },
-  { label: 'Spring Boot', subCategories: ["Dependency Injection", "Spring Security", "Spring Data JPA"] },
-  { label: 'Microservices', subCategories: ["REST APIs", "API Gateway", "Circuit Breakers"] },
-  { label: 'Database & JPA', subCategories: ["SQL Basics", "Transactions", "Hibernate"] },
-  { label: 'Algorithms', subCategories: ["Sorting", "Searching", "Dynamic Programming"] },
-];
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 
@@ -41,10 +31,10 @@ export default function AddQuestionPage() {
   const [success, setSuccess] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [wordCount, setWordCount] = useState(0);
-
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
-    category: "Core Java",
-    subCategory: "OOP Concepts",
+    category: "",
+    subCategory: "",
     difficulty: "Medium",
     question: "",
     answer: "",
@@ -65,7 +55,16 @@ export default function AddQuestionPage() {
   }, [formData.question, formData.answer]);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === "category") {
+      const selectedCategory = categories.find(cat => cat.label === value);
+      setFormData(prev => ({
+        ...prev,
+        category: value,
+        subCategory: selectedCategory?.subCategories?.[0] || "",
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -113,11 +112,36 @@ export default function AddQuestionPage() {
     }
   };
 
+  const _getCatergories = async () => {
+    try {
+      let res = await categoryAPI.getAll();
+      setCategories(res.data);
+    } catch (error) {
+      console.log(error, "Error while fetching categories");
+      setCategories([]);
+    }
+  }
+
+  useEffect(() => {
+    if (Array.isArray(categories) && categories.length > 0) {
+      const firstCategory = categories[0];
+      setFormData(prev => ({
+        ...prev,
+        category: firstCategory.label,
+        subCategory: firstCategory.subCategories?.[0] || "",
+      }));
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    _getCatergories();
+  }, []);
+
   const renderPreview = () => (
     <Box>
       <Paper sx={{ p: 3, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, mb: 3 }}>
         <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>Preview</Typography>
-        
+
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <Card sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
@@ -210,16 +234,26 @@ export default function AddQuestionPage() {
                       Basic Information
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControl fullWidth size="small">
                           <InputLabel>Category</InputLabel>
-                          <Select value={formData.category} label="Category" onChange={(e) => handleChange("category", e.target.value)}>
-                            {CATEGORIES.map(cat => <MenuItem key={cat.label} value={cat.label}>{cat.label}</MenuItem>)}
+                          <Select
+                            value={formData.category}
+                            label="Category"
+                            onChange={(e) => handleChange("category", e.target.value)}
+                          >
+                            {Array.isArray(categories) && categories.length > 0
+                              ? categories.map(cat => (
+                                <MenuItem key={cat.id} value={cat.label}>
+                                  {cat.label}
+                                </MenuItem>
+                              ))
+                              : null}
                           </Select>
                         </FormControl>
                       </Grid>
 
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControl fullWidth size="small">
                           <InputLabel>Sub-Category</InputLabel>
                           <Select
@@ -227,7 +261,7 @@ export default function AddQuestionPage() {
                             label="Sub-Category"
                             onChange={(e) => handleChange("subCategory", e.target.value)}
                           >
-                            {CATEGORIES.find(c => c.label === formData.category)?.subCategories
+                            {categories?.find(c => c.label === formData.category)?.subCategories
                               .map((sub, i) => (
                                 <MenuItem key={i} value={sub}>{sub}</MenuItem>
                               ))}
@@ -235,7 +269,7 @@ export default function AddQuestionPage() {
                         </FormControl>
                       </Grid>
 
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControl fullWidth size="small">
                           <InputLabel>Difficulty</InputLabel>
                           <Select value={formData.difficulty} label="Difficulty" onChange={(e) => handleChange("difficulty", e.target.value)}>
@@ -251,12 +285,12 @@ export default function AddQuestionPage() {
                     <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
                       Question
                     </Typography>
-                    <TextField 
-                      fullWidth 
-                      multiline 
-                      rows={2} 
-                      value={formData.question} 
-                      onChange={(e) => handleChange("question", e.target.value)} 
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      value={formData.question}
+                      onChange={(e) => handleChange("question", e.target.value)}
                       placeholder="Enter your question here..."
                       size="small"
                     />
@@ -283,19 +317,19 @@ export default function AddQuestionPage() {
                     <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
                       Tags (Optional)
                     </Typography>
-                    <TextField 
-                      fullWidth 
-                      value={formData.tags} 
-                      onChange={(e) => handleChange("tags", e.target.value)} 
+                    <TextField
+                      fullWidth
+                      value={formData.tags}
+                      onChange={(e) => handleChange("tags", e.target.value)}
                       placeholder="collections, threading, design-patterns"
                       size="small"
                     />
                     {formData.tags && (
                       <Box sx={{ mt: 1, display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                         {formData.tags.split(",").filter(t => t.trim()).map((tag, i) => (
-                          <Chip 
-                            key={i} 
-                            label={tag.trim()} 
+                          <Chip
+                            key={i}
+                            label={tag.trim()}
                             size="small"
                             onDelete={() => {
                               const tags = formData.tags.split(",").filter(t => t.trim() !== tag.trim());
@@ -317,7 +351,7 @@ export default function AddQuestionPage() {
                     >
                       Cancel
                     </Button>
-                    
+
                     <Button
                       variant="outlined"
                       onClick={() => setPreviewMode(true)}
@@ -326,7 +360,7 @@ export default function AddQuestionPage() {
                     >
                       Preview
                     </Button>
-                    
+
                     <Button
                       type="submit"
                       variant="contained"

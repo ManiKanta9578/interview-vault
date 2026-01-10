@@ -35,4 +35,8 @@ export const questionsAPI = {
   delete: (id) => api.delete(`/questions/${id}`),
 };
 
+export const categoryAPI = {
+  getAll: () => api.get('/categories'),
+};
+
 export default api;
