@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import {
   Search, ExpandMore, Add, FilterList, Close, Bookmark, BookmarkBorder,
-  ViewList, ViewModule, Sort, RestartAlt, Terminal
+  ViewList, ViewModule, Sort, RestartAlt, Terminal, Edit, Delete
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -37,6 +37,25 @@ export default function QuestionsPage() {
   const [search, setSearch] = useState('');
 
   const [isClient, setIsClient] = useState(false);
+
+  // ADD: Delete Handler
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
+      return;
+    }
+    try {
+      await questionsAPI.delete(id);
+      setQuestions(prev => prev.filter(q => q.id !== id));
+    } catch (error) {
+      console.error("Failed to delete question:", error);
+      alert("Failed to delete question. You might not be the owner.");
+    }
+  };
+
+  // ADD: Edit Handler
+  const handleEdit = (id) => {
+    router.push(`/edit-question/${id}`);
+  };
 
   // ... (Keep existing fetch logic: fetchQuestions, loadCategories, useEffects) ...
   const fetchQuestions = async () => {
@@ -103,7 +122,7 @@ export default function QuestionsPage() {
           position: 'fixed', inset: 0, zIndex: 0, opacity: 0.3, pointerEvents: 'none',
           backgroundImage: `linear-gradient(${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
-          willChange: 'transform' 
+          willChange: 'transform'
         }} />
 
         <StickyFilterBar
@@ -118,13 +137,13 @@ export default function QuestionsPage() {
 
           {/* Header Section */}
           <Box sx={{ mb: 4, mt: 4, textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ 
+            <Typography variant="h3" sx={{
               fontFamily: 'monospace', fontWeight: 700, mb: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2
             }}>
               <Terminal sx={{ fontSize: 40, color: theme.palette.primary.main }} />
               <Box component="span" sx={{ color: theme.palette.text.primary }}>Question_Bank</Box>
-              <Box component="span" sx={{ 
+              <Box component="span" sx={{
                 width: 12, height: 24, bgcolor: theme.palette.primary.main, animation: 'cursor 1s infinite'
               }} />
             </Typography>
@@ -141,7 +160,7 @@ export default function QuestionsPage() {
               border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               bgcolor: alpha(theme.palette.background.paper, 0.8), // Reduced transparency
               // Note: We keep blur here because it's just one element, not a list
-              backdropFilter: 'blur(8px)', 
+              backdropFilter: 'blur(8px)',
               display: 'flex', flexDirection: { xs: 'column', md: 'row' },
               gap: 2, alignItems: 'center'
             }}
@@ -155,8 +174,8 @@ export default function QuestionsPage() {
               }} sx={{ flex: 2 }}
             />
             <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' }, flex: 3 }}>
-               {/* ... Keep Category/SubCategory Selects ... */}
-               <FormControl fullWidth size="small">
+              {/* ... Keep Category/SubCategory Selects ... */}
+              <FormControl fullWidth size="small">
                 <Select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubCategory(""); }} sx={{ borderRadius: 1, bgcolor: alpha(theme.palette.background.default, 0.5), fontFamily: 'monospace' }} displayEmpty>
                   <MenuItem value="" disabled><em>Select Module</em></MenuItem>
                   {categories.map(cat => <MenuItem key={cat.id} value={cat.label} sx={{ fontFamily: 'monospace' }}>{cat.label}</MenuItem>)}
@@ -209,6 +228,8 @@ export default function QuestionsPage() {
                     setExpandedId={setExpandedId}
                     isBookmarked={bookmarked.includes(question.id)}
                     toggleBookmark={toggleBookmark}
+                    onEdit={() => handleEdit(question.id)}
+                    onDelete={() => handleDelete(question.id)}
                   />
                 ))}
               </Box>
@@ -218,7 +239,7 @@ export default function QuestionsPage() {
 
         {/* Filter Drawer & Fab (Keep existing code) */}
         <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)} PaperProps={{ sx: { width: { xs: '100%', sm: 350 }, p: 3, bgcolor: 'background.paper' } }}>
-           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>.config</Typography>
             <IconButton onClick={() => setFilterOpen(false)}><Close /></IconButton>
           </Box>
@@ -257,7 +278,7 @@ export default function QuestionsPage() {
 // ----------------------------------------------------------------------
 // OPTIMIZED QuestionCard
 // ----------------------------------------------------------------------
-function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggleBookmark, isMobile }) {
+function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggleBookmark, isMobile, onEdit, onDelete }) {
   const theme = useTheme();
 
   return (
@@ -267,9 +288,9 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
         borderRadius: 2,
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         // 2. OPTIMIZATION: Removed 'backdropFilter'. Used higher opacity background instead.
-        bgcolor: alpha(theme.palette.background.paper, 0.9), 
+        bgcolor: alpha(theme.palette.background.paper, 0.9),
         // 3. OPTIMIZATION: Specific transitions instead of 'all'
-        transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s', 
+        transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
         '&:hover': {
           borderColor: alpha(theme.palette.primary.main, 0.5),
           transform: 'translateY(-2px)',
@@ -280,7 +301,7 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
       <CardContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
-             <Chip
+            <Chip
               label={question.difficulty.toUpperCase()}
               size="small"
               sx={{
@@ -295,11 +316,23 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
               {question.category}
             </Typography>
           </Box>
-          <Tooltip title={isBookmarked ? "Remove Bookmark" : "Save Question"}>
-             <IconButton size="small" onClick={() => toggleBookmark(question.id)} sx={{ p: 0 }}>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title="Edit Question">
+              <IconButton size="small" onClick={onEdit} sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+                <Edit fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete Question">
+              <IconButton size="small" onClick={onDelete} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}>
+                <Delete fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={isBookmarked ? "Remove Bookmark" : "Save Question"}>
+              <IconButton size="small" onClick={() => toggleBookmark(question.id)}>
                 {isBookmarked ? <Bookmark fontSize="small" color="primary" /> : <BookmarkBorder fontSize="small" sx={{ color: 'text.disabled' }} />}
-             </IconButton>
-          </Tooltip>
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         <Typography
@@ -331,12 +364,12 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
       </CardContent>
 
       <Collapse in={expandedId === question.id} timeout="auto" unmountOnExit>
-        <Box sx={{ 
-          p: 2, 
+        <Box sx={{
+          p: 2,
           // 4. OPTIMIZATION: Ensure background is opaque enough to not require complex blending
-          bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)', 
+          bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)',
           borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          fontFamily: 'monospace' 
+          fontFamily: 'monospace'
         }}>
           <ReactQuillViewer value={question.answer} elevation={0} showBorder={false} />
         </Box>
@@ -362,10 +395,10 @@ function StickyFilterBar({ categories, selectedCategory, setSelectedCategory, se
           zIndex: 1099,
           bgcolor: alpha(theme.palette.background.paper, 0.9),
           // We can keep blur here because it's a SINGLE element, not a list
-          backdropFilter: 'blur(10px)', 
+          backdropFilter: 'blur(10px)',
           borderBottom: `1px solid ${theme.palette.divider}`,
           // 5. OPTIMIZATION: Hint to browser to optimize composition
-          willChange: 'transform' 
+          willChange: 'transform'
         }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 48, gap: 2 }}>
