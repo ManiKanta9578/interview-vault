@@ -20,8 +20,52 @@ import DOMPurify from "dompurify";
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 
+// Helper to normalize code blocks for Tiptap Editor
+// Converts <p><code>...</code></p> patterns into <pre><code>...</code></pre>
+const normalizeContentForEditor = (html) => {
+  if (typeof window === 'undefined' || !html) return html || "";
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const codeLines = Array.from(doc.querySelectorAll('p > code:only-child'));
+  
+  if (codeLines.length === 0) return html;
+
+  for (let i = 0; i < codeLines.length; i++) {
+    const codeTag = codeLines[i];
+    const pTag = codeTag.parentElement;
+    const prevP = pTag.previousElementSibling;
+    
+    // Start of a potential block?
+    const isStartOfBlock = !prevP || !prevP.querySelector('code:only-child');
+
+    if (isStartOfBlock) {
+      let currentP = pTag;
+      let codeContent = [];
+      let nodesToRemove = [];
+
+      while (currentP && currentP.querySelector('code:only-child')) {
+        codeContent.push(currentP.querySelector('code').textContent);
+        nodesToRemove.push(currentP);
+        currentP = currentP.nextElementSibling;
+      }
+
+      if (codeContent.length > 0) {
+        const pre = doc.createElement('pre');
+        const code = doc.createElement('code');
+        code.className = 'language-java'; // Default to java or let auto-detect
+        code.textContent = codeContent.join('\n');
+        pre.appendChild(code);
+        pTag.parentNode.replaceChild(pre, pTag);
+        nodesToRemove.slice(1).forEach(node => node.remove());
+        i += nodesToRemove.length - 1;
+      }
+    }
+  }
+  return doc.body.innerHTML;
+};
+
 export default function EditQuestionPage({ params }) {
-  // Unwrap params for Next.js App Router
   const resolvedParams = use(params);
   const id = resolvedParams.id;
 
@@ -51,7 +95,6 @@ export default function EditQuestionPage({ params }) {
     return clean.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   };
 
-  // Fetch Categories and Existing Question Data
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -60,22 +103,25 @@ export default function EditQuestionPage({ params }) {
         const catRes = await categoryAPI.getAll();
         setCategories(catRes.data);
 
-        // 2. Load Question Data
+        // 2. Load Question
         const qRes = await questionsAPI.getById(id);
         const q = qRes.data;
 
+        // 3. Normalize Answer (Fix formatting issues)
+        const normalizedAnswer = normalizeContentForEditor(q.answer);
+
         setFormData({
             category: q.category,
-            subCategory: q.subCategory,
+            subCategory: q.subCategory || "",
             difficulty: q.difficulty,
             question: q.question,
-            answer: q.answer,
+            answer: normalizedAnswer,
             tags: q.tags || "",
         });
 
       } catch (err) {
         console.error("Error loading data", err);
-        setError("Failed to load question data. It may not exist or you lack permission.");
+        setError("Failed to load question. It may not exist or you lack permission.");
       } finally {
         setFetching(false);
       }
@@ -132,7 +178,7 @@ export default function EditQuestionPage({ params }) {
       setTimeout(() => router.push("/questions"), 1200);
     } catch (err) {
       console.error("Error updating question:", err);
-      setError(err?.message || "Failed to update question in database");
+      setError(err?.message || "Failed to update question");
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+// frontend/src/app/questions/page.js
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,8 @@ import {
 } from '@mui/material';
 import {
   Search, ExpandMore, Add, FilterList, Close, Bookmark, BookmarkBorder,
-  ViewList, ViewModule, Sort, RestartAlt, Terminal, Edit, Delete
+  ViewList, ViewModule, Sort, RestartAlt, Terminal,
+  Edit, Delete // Added imports
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -21,7 +23,7 @@ import useScrollTrigger from '@mui/material/useScrollTrigger';
 export default function QuestionsPage() {
   const theme = useTheme();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user } = useAuth(); // If you have user info, use it to only show delete for owner
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,29 +37,9 @@ export default function QuestionsPage() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
   const [search, setSearch] = useState('');
-
   const [isClient, setIsClient] = useState(false);
 
-  // ADD: Delete Handler
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
-      return;
-    }
-    try {
-      await questionsAPI.delete(id);
-      setQuestions(prev => prev.filter(q => q.id !== id));
-    } catch (error) {
-      console.error("Failed to delete question:", error);
-      alert("Failed to delete question. You might not be the owner.");
-    }
-  };
-
-  // ADD: Edit Handler
-  const handleEdit = (id) => {
-    router.push(`/edit-question/${id}`);
-  };
-
-  // ... (Keep existing fetch logic: fetchQuestions, loadCategories, useEffects) ...
+  // Fetch Questions (unchanged)
   const fetchQuestions = async () => {
     setLoading(true);
     try {
@@ -109,6 +91,26 @@ export default function QuestionsPage() {
     setSearch("");
   };
 
+  // --- NEW HANDLERS ---
+  const handleDelete = async (id, e) => {
+    e.stopPropagation(); // Prevent card expansion
+    if (!window.confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
+      return;
+    }
+    try {
+      await questionsAPI.delete(id);
+      setQuestions(prev => prev.filter(q => q.id !== id));
+    } catch (error) {
+      console.error("Failed to delete question:", error);
+      alert("Failed to delete. You may not be authorized.");
+    }
+  };
+
+  const handleEdit = (id, e) => {
+    e.stopPropagation(); // Prevent card expansion
+    router.push(`/edit-question/${id}`);
+  };
+
   const hasFilters = search !== "" || selectedSubCategory !== "";
 
   if (!isClient) return null;
@@ -116,13 +118,11 @@ export default function QuestionsPage() {
   return (
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10, position: 'relative' }}>
-
-        {/* 1. OPTIMIZATION: Added willChange to background to promote it to GPU layer */}
         <Box sx={{
           position: 'fixed', inset: 0, zIndex: 0, opacity: 0.3, pointerEvents: 'none',
           backgroundImage: `linear-gradient(${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.05)} 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
-          willChange: 'transform'
+          willChange: 'transform' 
         }} />
 
         <StickyFilterBar
@@ -134,16 +134,14 @@ export default function QuestionsPage() {
         />
 
         <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
-
-          {/* Header Section */}
           <Box sx={{ mb: 4, mt: 4, textAlign: 'center' }}>
-            <Typography variant="h3" sx={{
+            <Typography variant="h3" sx={{ 
               fontFamily: 'monospace', fontWeight: 700, mb: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2
             }}>
               <Terminal sx={{ fontSize: 40, color: theme.palette.primary.main }} />
               <Box component="span" sx={{ color: theme.palette.text.primary }}>Question_Bank</Box>
-              <Box component="span" sx={{
+              <Box component="span" sx={{ 
                 width: 12, height: 24, bgcolor: theme.palette.primary.main, animation: 'cursor 1s infinite'
               }} />
             </Typography>
@@ -152,20 +150,7 @@ export default function QuestionsPage() {
             </Typography>
           </Box>
 
-          {/* Control Bar */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5, mb: 4, borderRadius: 2,
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              bgcolor: alpha(theme.palette.background.paper, 0.8), // Reduced transparency
-              // Note: We keep blur here because it's just one element, not a list
-              backdropFilter: 'blur(8px)',
-              display: 'flex', flexDirection: { xs: 'column', md: 'row' },
-              gap: 2, alignItems: 'center'
-            }}
-          >
-            {/* ... (Keep your existing TextField and Selects exactly as they were) ... */}
+          <Paper elevation={0} sx={{ p: 1.5, mb: 4, borderRadius: 2, border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, bgcolor: alpha(theme.palette.background.paper, 0.8), backdropFilter: 'blur(8px)', display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'center' }}>
             <TextField
               fullWidth placeholder="grep 'search_query'..." value={search} onChange={(e) => setSearch(e.target.value)} size="small"
               InputProps={{
@@ -174,8 +159,7 @@ export default function QuestionsPage() {
               }} sx={{ flex: 2 }}
             />
             <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' }, flex: 3 }}>
-              {/* ... Keep Category/SubCategory Selects ... */}
-              <FormControl fullWidth size="small">
+               <FormControl fullWidth size="small">
                 <Select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubCategory(""); }} sx={{ borderRadius: 1, bgcolor: alpha(theme.palette.background.default, 0.5), fontFamily: 'monospace' }} displayEmpty>
                   <MenuItem value="" disabled><em>Select Module</em></MenuItem>
                   {categories.map(cat => <MenuItem key={cat.id} value={cat.label} sx={{ fontFamily: 'monospace' }}>{cat.label}</MenuItem>)}
@@ -202,7 +186,6 @@ export default function QuestionsPage() {
             </Stack>
           </Paper>
 
-          {/* Content Area */}
           <Box sx={{ position: 'relative' }}>
             {loading && questions.length === 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10 }}>
@@ -228,23 +211,22 @@ export default function QuestionsPage() {
                     setExpandedId={setExpandedId}
                     isBookmarked={bookmarked.includes(question.id)}
                     toggleBookmark={toggleBookmark}
-                    onEdit={() => handleEdit(question.id)}
-                    onDelete={() => handleDelete(question.id)}
+                    onEdit={(e) => handleEdit(question.id, e)}     // Pass Handler
+                    onDelete={(e) => handleDelete(question.id, e)} // Pass Handler
                   />
                 ))}
               </Box>
             )}
           </Box>
         </Container>
-
-        {/* Filter Drawer & Fab (Keep existing code) */}
+        
+        {/* Drawers and FAB (unchanged) */}
         <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)} PaperProps={{ sx: { width: { xs: '100%', sm: 350 }, p: 3, bgcolor: 'background.paper' } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>.config</Typography>
             <IconButton onClick={() => setFilterOpen(false)}><Close /></IconButton>
           </Box>
           <Stack spacing={3}>
-            {/* ... Sort and Difficulty Selects ... */}
             <Box>
               <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', mb: 1, color: 'text.secondary' }}>SORT_BY</Typography>
               <FormControl fullWidth size="small">
@@ -276,9 +258,12 @@ export default function QuestionsPage() {
 }
 
 // ----------------------------------------------------------------------
-// OPTIMIZED QuestionCard
+// OPTIMIZED QuestionCard with Edit/Delete
 // ----------------------------------------------------------------------
-function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggleBookmark, isMobile, onEdit, onDelete }) {
+function QuestionCard({ 
+  question, expandedId, setExpandedId, isBookmarked, toggleBookmark, 
+  onEdit, onDelete // Recieve props
+}) {
   const theme = useTheme();
 
   return (
@@ -287,10 +272,8 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
       sx={{
         borderRadius: 2,
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        // 2. OPTIMIZATION: Removed 'backdropFilter'. Used higher opacity background instead.
-        bgcolor: alpha(theme.palette.background.paper, 0.9),
-        // 3. OPTIMIZATION: Specific transitions instead of 'all'
-        transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+        bgcolor: alpha(theme.palette.background.paper, 0.9), 
+        transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s', 
         '&:hover': {
           borderColor: alpha(theme.palette.primary.main, 0.5),
           transform: 'translateY(-2px)',
@@ -301,7 +284,7 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
       <CardContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Chip
+             <Chip
               label={question.difficulty.toUpperCase()}
               size="small"
               sx={{
@@ -316,21 +299,23 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
               {question.category}
             </Typography>
           </Box>
+
+          {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Tooltip title="Edit Question">
-              <IconButton size="small" onClick={onEdit} sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
-                <Edit fontSize="small" />
-              </IconButton>
+               <IconButton size="small" onClick={onEdit} sx={{ color: 'text.secondary', '&:hover': { color: theme.palette.primary.main } }}>
+                  <Edit fontSize="small" />
+               </IconButton>
             </Tooltip>
             <Tooltip title="Delete Question">
-              <IconButton size="small" onClick={onDelete} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}>
-                <Delete fontSize="small" />
-              </IconButton>
+               <IconButton size="small" onClick={onDelete} sx={{ color: 'text.secondary', '&:hover': { color: theme.palette.error.main } }}>
+                  <Delete fontSize="small" />
+               </IconButton>
             </Tooltip>
             <Tooltip title={isBookmarked ? "Remove Bookmark" : "Save Question"}>
-              <IconButton size="small" onClick={() => toggleBookmark(question.id)}>
-                {isBookmarked ? <Bookmark fontSize="small" color="primary" /> : <BookmarkBorder fontSize="small" sx={{ color: 'text.disabled' }} />}
-              </IconButton>
+               <IconButton size="small" onClick={() => toggleBookmark(question.id)} sx={{ p: 0 }}>
+                  {isBookmarked ? <Bookmark fontSize="small" color="primary" /> : <BookmarkBorder fontSize="small" sx={{ color: 'text.disabled' }} />}
+               </IconButton>
             </Tooltip>
           </Box>
         </Box>
@@ -364,12 +349,11 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
       </CardContent>
 
       <Collapse in={expandedId === question.id} timeout="auto" unmountOnExit>
-        <Box sx={{
-          p: 2,
-          // 4. OPTIMIZATION: Ensure background is opaque enough to not require complex blending
-          bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)',
+        <Box sx={{ 
+          p: 2, 
+          bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)', 
           borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          fontFamily: 'monospace'
+          fontFamily: 'monospace' 
         }}>
           <ReactQuillViewer value={question.answer} elevation={0} showBorder={false} />
         </Box>
@@ -378,64 +362,60 @@ function QuestionCard({ question, expandedId, setExpandedId, isBookmarked, toggl
   );
 }
 
-// ----------------------------------------------------------------------
-// OPTIMIZED StickyFilterBar
-// ----------------------------------------------------------------------
+// StickyFilterBar and getDifficultyColor remain the same
 function StickyFilterBar({ categories, selectedCategory, setSelectedCategory, selectedSubCategory, setSelectedSubCategory }) {
-  const theme = useTheme();
-  const trigger = useScrollTrigger({ disableHysteresis: true, threshold: 200 });
-  const activeSubCategories = categories.find(c => c.label === selectedCategory)?.subCategories || [];
-
-  return (
-    <Slide appear={false} direction="down" in={trigger}>
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          zIndex: 1099,
-          bgcolor: alpha(theme.palette.background.paper, 0.9),
-          // We can keep blur here because it's a SINGLE element, not a list
-          backdropFilter: 'blur(10px)',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          // 5. OPTIMIZATION: Hint to browser to optimize composition
-          willChange: 'transform'
-        }}
-      >
-        <Toolbar variant="dense" sx={{ minHeight: 48, gap: 2 }}>
-          <FormControl variant="standard" size="small" sx={{ minWidth: 100, maxWidth: 200 }}>
-            <Select
-              disableUnderline value={selectedCategory}
-              onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubCategory(""); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              displayEmpty
-              renderValue={(selected) => <Typography variant="body2" fontWeight={600} color="primary" sx={{ fontFamily: 'monospace' }}>{selected || "All Categories"}</Typography>}
-              MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
-            >
-              <MenuItem value=""><em>All Categories</em></MenuItem>
-              {categories.map((cat) => <MenuItem key={cat.id} value={cat.label} sx={{ fontFamily: 'monospace' }}>{cat.label}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <Typography color="text.secondary" sx={{ fontFamily: 'monospace' }}>/</Typography>
-          <FormControl variant="standard" size="small" sx={{ minWidth: 120, maxWidth: 200 }} disabled={!selectedCategory}>
-            <Select
-              disableUnderline value={selectedSubCategory}
-              onChange={(e) => { setSelectedSubCategory(e.target.value); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              displayEmpty
-              renderValue={(selected) => <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace' }}>{selected || "All Topics"}</Typography>}
-              MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
-            >
-              <MenuItem value="">All Topics</MenuItem>
-              {activeSubCategories.map((sub, index) => <MenuItem key={index} value={sub} sx={{ fontFamily: 'monospace' }}>{sub}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <Box sx={{ flexGrow: 1 }} />
-          <Button size="small" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} sx={{ minWidth: 'auto', color: 'text.secondary', fontFamily: 'monospace' }}>top()</Button>
-        </Toolbar>
-      </AppBar>
-    </Slide>
-  );
-}
-
-function getDifficultyColor(difficulty) {
-  const colors = { 'Easy': '#10B981', 'Medium': '#F59E0B', 'Hard': '#EF4444' };
-  return colors[difficulty] || '#6B7280';
-}
+    const theme = useTheme();
+    const trigger = useScrollTrigger({ disableHysteresis: true, threshold: 200 });
+    const activeSubCategories = categories.find(c => c.label === selectedCategory)?.subCategories || [];
+  
+    return (
+      <Slide appear={false} direction="down" in={trigger}>
+        <AppBar
+          position="fixed"
+          elevation={0}
+          sx={{
+            zIndex: 1099,
+            bgcolor: alpha(theme.palette.background.paper, 0.9),
+            backdropFilter: 'blur(10px)', 
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            willChange: 'transform' 
+          }}
+        >
+          <Toolbar variant="dense" sx={{ minHeight: 48, gap: 2 }}>
+            <FormControl variant="standard" size="small" sx={{ minWidth: 100, maxWidth: 200 }}>
+              <Select
+                disableUnderline value={selectedCategory}
+                onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubCategory(""); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                displayEmpty
+                renderValue={(selected) => <Typography variant="body2" fontWeight={600} color="primary" sx={{ fontFamily: 'monospace' }}>{selected || "All Categories"}</Typography>}
+                MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+              >
+                <MenuItem value=""><em>All Categories</em></MenuItem>
+                {categories.map((cat) => <MenuItem key={cat.id} value={cat.label} sx={{ fontFamily: 'monospace' }}>{cat.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Typography color="text.secondary" sx={{ fontFamily: 'monospace' }}>/</Typography>
+            <FormControl variant="standard" size="small" sx={{ minWidth: 120, maxWidth: 200 }} disabled={!selectedCategory}>
+              <Select
+                disableUnderline value={selectedSubCategory}
+                onChange={(e) => { setSelectedSubCategory(e.target.value); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                displayEmpty
+                renderValue={(selected) => <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace' }}>{selected || "All Topics"}</Typography>}
+                MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+              >
+                <MenuItem value="">All Topics</MenuItem>
+                {activeSubCategories.map((sub, index) => <MenuItem key={index} value={sub} sx={{ fontFamily: 'monospace' }}>{sub}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Box sx={{ flexGrow: 1 }} />
+            <Button size="small" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} sx={{ minWidth: 'auto', color: 'text.secondary', fontFamily: 'monospace' }}>top()</Button>
+          </Toolbar>
+        </AppBar>
+      </Slide>
+    );
+  }
+  
+  function getDifficultyColor(difficulty) {
+    const colors = { 'Easy': '#10B981', 'Medium': '#F59E0B', 'Hard': '#EF4444' };
+    return colors[difficulty] || '#6B7280';
+  }

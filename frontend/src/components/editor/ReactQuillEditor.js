@@ -1,3 +1,4 @@
+// frontend/src/components/editor/ReactQuillEditor.js
 "use client";
 
 import React, { useEffect, useRef } from 'react';
@@ -124,7 +125,7 @@ export default function ReactQuillEditor({ value, onChange, placeholder }) {
   const theme = useTheme();
 
   const editor = useEditor({
-    immediatelyRender: false, // Prevents SSR Hydration Mismatch
+    immediatelyRender: false, 
     extensions: [
       StarterKit.configure({ codeBlock: false }),
       CodeBlockLowlight.configure({ lowlight, defaultLanguage: 'java', HTMLAttributes: { class: 'code-block' } }),
@@ -146,10 +147,16 @@ export default function ReactQuillEditor({ value, onChange, placeholder }) {
     },
   });
 
+  // FIX: Allow populating editor content when data loads
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      if (value === '' || value === '<p></p>') {
-        editor.commands.setContent(value);
+    if (editor && value !== undefined) {
+      const currentContent = editor.getHTML();
+      // If editor is effectively empty (just an empty P tag) but value is not, set content.
+      // Or if value is explicitly empty string/p tag (clearing).
+      if ((currentContent === '<p></p>' && value !== '<p></p>') || value === '' || value === '<p></p>') {
+        if (value !== currentContent) {
+           editor.commands.setContent(value);
+        }
       }
     }
   }, [value, editor]);
@@ -165,13 +172,13 @@ export default function ReactQuillEditor({ value, onChange, placeholder }) {
         fontFamily: theme.typography.fontFamily, fontSize: '0.95rem', color: theme.palette.text.primary,
         
         '& img': {
-          maxWidth: '100%',        // Ensure it doesn't overflow horizontally
-          maxHeight: '400px',      // LIMIT HEIGHT so it's not huge
-          width: 'auto',           // Maintain aspect ratio
-          height: 'auto',          // Maintain aspect ratio
+          maxWidth: '100%',
+          maxHeight: '400px',
+          width: 'auto',
+          height: 'auto',
           borderRadius: '8px',
           display: 'block',
-          margin: '1.5em auto',    // Center horizontally
+          margin: '1.5em auto',
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           boxShadow: theme.shadows[4]
         },
@@ -184,12 +191,14 @@ export default function ReactQuillEditor({ value, onChange, placeholder }) {
         '& th': {
           backgroundColor: alpha(theme.palette.primary.main, 0.1), fontWeight: 600, textAlign: 'left',
         },
+        // IMPROVED: Ensure pre tag (code block) styling in editor matches viewer
         '& pre': {
           background: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
           color: theme.palette.mode === 'dark' ? '#d4d4d4' : '#333',
           padding: '1rem', borderRadius: '0.5rem',
           fontFamily: "'JetBrains Mono', monospace",
           border: `1px solid ${theme.palette.divider}`, overflowX: 'auto',
+          margin: '1em 0',
           '& code': { color: 'inherit', padding: 0, background: 'none', fontSize: '0.85rem' },
           '& .hljs-keyword': { color: '#569cd6' },
         },
