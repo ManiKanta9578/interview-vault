@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Container, Paper, Typography, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, Alert,
-  CircularProgress, Stack, Chip, alpha, Card, Grid, Tabs, Tab, useTheme, useMediaQuery, InputAdornment, Divider
+  CircularProgress, Stack, Chip, alpha, Card, Grid, Tabs, Tab, useTheme, InputAdornment, Divider
 } from "@mui/material";
 import {
-  Save, ArrowBack, AddCircle, CheckCircle, Category,
-  Help, Visibility, Edit, QuestionAnswer, Terminal, 
-  Code, Description, Storage, Tune, PlayArrow, Close
+  Save, CheckCircle, Help, Visibility, Edit, Terminal, 
+  Storage, Close
 } from "@mui/icons-material";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -22,13 +21,12 @@ const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 
 export default function AddQuestionPage() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false); // false = Edit, true = Preview
+  const [previewMode, setPreviewMode] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [categories, setCategories] = useState([]);
   
@@ -41,7 +39,6 @@ export default function AddQuestionPage() {
     tags: "",
   });
 
-  // ... (Keep existing htmlToPlain and handleChange logic) ...
   const htmlToPlain = (html = "") => {
     if (typeof window === 'undefined') return "";
     const clean = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
@@ -103,7 +100,6 @@ export default function AddQuestionPage() {
     }
   };
 
-  // Fetch Categories logic
   useEffect(() => {
     const loadCats = async () => {
       try {
@@ -123,7 +119,6 @@ export default function AddQuestionPage() {
     loadCats();
   }, []);
 
-  // Render Functions
   const renderMetadataPanel = () => (
     <Paper sx={{ 
       p: 2, mb: 3, 
@@ -134,8 +129,10 @@ export default function AddQuestionPage() {
       <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', mb: 2, display: 'block' }}>
         // CONFIGURATION
       </Typography>
+      
+      {/* Responsive Grid: xs=12 (Stack on mobile), md=4 (3 cols on desktop) */}
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth size="small">
             <InputLabel sx={{ fontFamily: 'monospace' }}>CATEGORY</InputLabel>
             <Select
@@ -148,7 +145,7 @@ export default function AddQuestionPage() {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth size="small">
             <InputLabel sx={{ fontFamily: 'monospace' }}>SUB_MODULE</InputLabel>
             <Select
@@ -163,7 +160,7 @@ export default function AddQuestionPage() {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth size="small">
             <InputLabel sx={{ fontFamily: 'monospace' }}>DIFFICULTY</InputLabel>
             <Select 
@@ -194,7 +191,8 @@ export default function AddQuestionPage() {
         <Container maxWidth="lg" sx={{ pt: 4, position: 'relative', zIndex: 1 }}>
           
           {/* Header - "Breadcrumb Path" */}
-          <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Responsive: flexWrap ensures items drop to next line on small screens */}
+          <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Terminal sx={{ color: theme.palette.primary.main }} />
                 <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
@@ -232,6 +230,8 @@ export default function AddQuestionPage() {
               <Tabs 
                 value={previewMode ? 1 : 0} 
                 onChange={(e, v) => setPreviewMode(v === 1)}
+                variant="scrollable" // Allows scrolling on very small screens
+                scrollButtons="auto"
                 sx={{ 
                   '& .MuiTab-root': { 
                     fontFamily: 'monospace', 
@@ -323,6 +323,7 @@ export default function AddQuestionPage() {
                       }}
                       sx={{ '& .MuiInputBase-input': { fontFamily: 'monospace' } }}
                     />
+                    {/* Tags wrap naturally */}
                     <Box sx={{ mt: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       {formData.tags.split(',').filter(t => t.trim()).map((tag, i) => (
                         <Chip 
@@ -364,17 +365,18 @@ export default function AddQuestionPage() {
               <Divider sx={{ my: 4 }} />
 
               {/* ACTION BAR */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+              {/* Responsive: flexWrap ensures buttons wrap below text on small screens */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: '150px' }}>
                   {wordCount} words • {formData.question.length} chars
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
                   <Button 
                     onClick={() => setPreviewMode(!previewMode)}
                     variant="outlined"
                     startIcon={previewMode ? <Edit /> : <Visibility />}
-                    sx={{ fontFamily: 'monospace', textTransform: 'none' }}
+                    sx={{ fontFamily: 'monospace', textTransform: 'none', flexGrow: { xs: 1, sm: 0 } }}
                   >
                     {previewMode ? "return_to_edit()" : "preview_render()"}
                   </Button>
@@ -390,6 +392,7 @@ export default function AddQuestionPage() {
                       fontWeight: 700,
                       bgcolor: 'primary.main',
                       px: 3,
+                      flexGrow: { xs: 1, sm: 0 },
                       '&:hover': { bgcolor: 'primary.dark' }
                     }}
                   >

@@ -46,22 +46,50 @@ const repairCodeBlocks = (html) => {
   return doc.body.innerHTML;
 };
 
+// --- NEW FUNCTION: Wraps tables in a scrollable div ---
+const makeTablesResponsive = (html) => {
+  if (typeof window === 'undefined') return html;
+  // If no tables, skip parsing for performance
+  if (!html.includes('<table')) return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const tables = doc.querySelectorAll('table');
+
+  tables.forEach(table => {
+    // Check if already wrapped (to prevent double wrapping on re-renders)
+    if (table.parentElement.classList.contains('table-responsive')) return;
+
+    const wrapper = doc.createElement('div');
+    wrapper.className = 'table-responsive';
+    table.parentNode.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+  });
+
+  return doc.body.innerHTML;
+};
+
 export default function RichTextViewer({ value }) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
   const processedHtml = useMemo(() => {
-    const repaired = repairCodeBlocks(value || "");
-    return DOMPurify.sanitize(repaired, {
-      // --- ADD TABLE & IMG TAGS HERE ---
+    // 1. Repair p>code blocks
+    let content = repairCodeBlocks(value || "");
+    
+    // 2. Wrap tables for responsiveness
+    content = makeTablesResponsive(content);
+
+    return DOMPurify.sanitize(content, {
       ALLOWED_TAGS: [
         "p", "br", "strong", "em", "u", "s", "h1", "h2", "h3", "h4", 
         "ul", "ol", "li", "blockquote", "pre", "code", "a", "span", 
-        "img", "table", "thead", "tbody", "tr", "th", "td" // <--- Added these
+        "img", "table", "thead", "tbody", "tr", "th", "td", 
+        "div" // Ensure DIV is allowed for the wrapper
       ],
       ALLOWED_ATTR: [
         "href", "target", "rel", "class", "src", "alt", "style", 
-        "width", "height", "colspan", "rowspan" // <--- Added table attrs
+        "width", "height", "colspan", "rowspan"
       ],
     });
   }, [value]);
@@ -83,26 +111,32 @@ export default function RichTextViewer({ value }) {
 
       // --- Image Rendering ---
       '& img': {
-        maxWidth: '100%',        // Prevents horizontal overflow
-        maxHeight: '500px',      // Larger limit for viewing vs editing
-        width: 'auto',           // Maintain aspect ratio
-        height: 'auto',          // Maintain aspect ratio
+        maxWidth: '100%',
+        maxHeight: '500px',
+        width: 'auto',
+        height: 'auto',
         borderRadius: '8px',
         display: 'block',
-        margin: '1.5em auto',    // Center horizontally
+        margin: '1.5em auto',
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         boxShadow: theme.shadows[4]
       },
 
-      // --- Table Rendering (Developer Style) ---
+      // --- Responsive Table Container ---
+      '& .table-responsive': {
+        width: '100%',
+        overflowX: 'auto', // Horizontal scroll
+        marginBottom: '1.5em',
+        borderRadius: '6px',
+        border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+      },
+
+      // --- Table Styles ---
       '& table': {
         width: '100%',
+        minWidth: '600px', // Force min-width to ensure scroll triggers on small screens
         borderCollapse: 'collapse',
-        margin: '1.5em 0',
         fontSize: '0.9em',
-        borderRadius: '6px',
-        overflow: 'hidden',
-        border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
       },
       '& th': {
         backgroundColor: alpha(theme.palette.primary.main, 0.08),
@@ -111,12 +145,14 @@ export default function RichTextViewer({ value }) {
         textAlign: 'left',
         padding: '12px 16px',
         borderBottom: `2px solid ${alpha(theme.palette.divider, 0.2)}`,
-        fontFamily: "'JetBrains Mono', monospace", // Dev look for headers
+        fontFamily: "'JetBrains Mono', monospace",
+        whiteSpace: 'nowrap', // Prevent headers from wrapping too aggressively
       },
       '& td': {
         padding: '12px 16px',
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         color: theme.palette.text.secondary,
+        verticalAlign: 'top',
       },
       '& tr:last-child td': {
         borderBottom: 'none',
@@ -125,7 +161,7 @@ export default function RichTextViewer({ value }) {
         backgroundColor: alpha(theme.palette.action.hover, 0.05),
       },
 
-      // --- Existing Code Block Styles ---
+      // --- Code Block Styles ---
       '& :not(pre) > code': {
         fontFamily: "'JetBrains Mono', monospace",
         backgroundColor: alpha(theme.palette.primary.main, 0.1),
